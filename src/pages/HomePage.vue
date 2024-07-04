@@ -1,0 +1,135 @@
+<template lang="">
+  <div class="bg-dark">
+  <q-card class="bg-dark q-pt-xl" style="border:0" flat>
+    <div class="image-avatar-1 bg-secondary" style="border-radius: 100%; ">
+      <img src="/business.png" class="appearBox" style="position: absolute; object-position: fit; height: 90%; width: 90%; right: 5px">
+    </div>
+
+    <q-card-section class="text-center q-pt-sm text-white appearBox">
+      <div class="text-h6">Welcome Joe Doe, to M-Pesa Catalog</div>
+      <div class="text-caption">We enhance operational efficiency and streamline workflows by digitizing all M-Pesa processes. <br/>
+        Our web catalog, supported by a CMS, improves accessibility, ensures timely updates, and keeps all stakeholders informed, <br/>
+        optimizing processes and monitoring business workflows.</div>
+    </q-card-section>
+
+    </q-card>
+  </div>
+  <div class="bg-secondary text-white ">
+    <q-toolbar class="bg-dark">
+      <div class="text-subtitle text-white">Sponsored by: M-Pesa Ops</div>
+      <q-space></q-space>
+      <q-btn flat round to="/" dense icon="info" class="" />
+    </q-toolbar>
+  </div>
+  <div class="row bg-accent q-pa-md appearBox" style="min-height: calc(100vh - 240px)">
+    <div class="col q-mr-md">
+      <q-card flat class="bg-white">
+        <q-card-section>
+          <div class="text-h6">User Details</div>
+          <div class="text-subtitle2">Review your personal details in the View your <br> Profile Information section.</div>
+        </q-card-section>
+      </q-card>
+      <q-card flat class="bg-white q-mt-md" style="min-height: 345px">
+        <div class="text-subtitle2 q-pt-lg q-pl-md q-mb-md">Information:</div>
+        <q-list class=" text-grey-7 q-mb-md">
+          <q-item
+          >
+            <q-item-section avatar>
+              <q-icon name="email" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label >User email</q-item-label>
+              <q-item-label class="text-dark">ivan.simon@gmail.com</q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item
+          >
+            <q-item-section avatar>
+              <q-icon name="person" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label >Username</q-item-label>
+              <q-item-label class="text-dark">Simoi002</q-item-label>
+            </q-item-section>
+
+          </q-item>
+          <q-item
+          >
+            <q-item-section avatar>
+              <q-icon name="edit" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label >Name</q-item-label>
+              <q-item-label class="text-dark">Ivan Simon Como</q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item
+          >
+            <q-item-section avatar>
+              <q-icon name="toggle_on" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label >Account Status</q-item-label>
+              <q-item-label class="text-dark">Active</q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+        <q-separator/>
+        <q-card-actions>
+          <q-btn no-caps icon="settings" label="Settings" color="dark" flat></q-btn>
+        </q-card-actions>
+      </q-card>
+    </div>
+    <div class="col">
+      <q-card flat class="bg-white">
+        <q-card-section>
+          <div class="text-h6">Tasks</div>
+          <div class="text-subtitle2">Stay organized and on top of your duties with<br>   the Tasks section.</div>
+        </q-card-section>
+      </q-card>
+      <q-card flat class="bg-white q-mt-md" style="min-height: 345px">
+        <ApprovalTab />
+      </q-card>
+    </div>
+    <div class="col q-ml-md">
+      <q-card flat class="bg-white">
+        <q-card-section>
+          <div class="text-h6">Roles and Permissions</div>
+          <div class="text-subtitle2">Manage user access and control within the Roles <br> and Permissions section.</div>
+        </q-card-section>
+      </q-card>
+      <q-card flat class="bg-white q-mt-md" style="min-height: 345px">
+        <UserRoles />
+      </q-card>
+    </div>
+  </div>
+</template>
+<script>
+import { ref } from 'vue'
+import ApprovalTab from "../components/home/ApprovalTab.vue"
+import UserRoles from "../components/home/UserRoles.vue"
+export default {
+  components: {
+    ApprovalTab, UserRoles
+  },
+  setup () {
+    return {
+      checked: ref(false),
+    }
+  }
+}
+</script>
+<style lang="scss">
+.image-avatar-1 {
+
+  border-radius: 50px 20px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  width: 100px;
+  margin: 0 auto;
+  padding-left: 4px;
+}
+</style>
