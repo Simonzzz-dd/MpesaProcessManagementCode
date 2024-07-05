@@ -16,6 +16,10 @@ const routes = [
     component: () => import('layouts/ContentManagment.vue')
   },
   {
+    path: '/content-managment/:dir',
+    component: () => import('layouts/ContentManagment.vue')
+  },
+  {
     path: '/login',
     component: () => import('layouts/LoginPage.vue')
   },

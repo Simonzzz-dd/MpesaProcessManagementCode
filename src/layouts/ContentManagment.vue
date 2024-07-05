@@ -5,7 +5,7 @@
         <q-toolbar>
           <q-btn flat @click="drawerLeft = !drawerLeft" style="rotate: 90deg;" round dense icon="leaderboard" />
           <div class="text-weight-bold q-mr-auto q-ml-md">Content Management Page</div>
-          <q-btn flat round dense icon="arrow_back" />
+          <q-btn flat round dense icon="arrow_back" @click="goBack" />
         </q-toolbar>
       </q-header>
 
@@ -41,15 +41,15 @@
         </q-scroll-area>
         <q-img
           class="absolute-top"
-          src="https://images.unsplash.com/photo-1533134486753-c833f0ed4866?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          src="/src/assets/dark.jpg"
           style="height: 150px"
         >
           <div class="absolute-bottom bg-transparent">
             <q-avatar size="56px" class="q-mb-sm">
               <img src="https://cdn.quasar.dev/img/boy-avatar.png" />
             </q-avatar>
-            <div class="">Razvan Stoenescu</div>
-            <div>@rstoenescu</div>
+            <div class="">{{ user.username }}</div>
+            <div>{{ user.email }}</div>
           </div>
         </q-img>
       </q-drawer>
@@ -67,8 +67,12 @@
 import { uid } from 'uid';
 import DragDrop from '../pages/contentManagment/dragDrop.vue';
 import ContentPage from "../pages/contentManagment/contentPage.vue";
-import { ref, getCurrentInstance } from 'vue';
+import { ref, getCurrentInstance, onMounted } from 'vue';
 import { createFile } from 'src/boot/directories';
+import { useRoute, useRouter } from 'vue-router';
+import { useQuasar } from 'quasar'; // Import Notify from Quasar
+import { getCurrentUser } from 'boot/auth'; // Import the getCurrentUser function
+import Cookies from 'js-cookie';
 
 export default {
   components: {
@@ -77,6 +81,38 @@ export default {
   },
   setup() {
     const { proxy } = getCurrentInstance(); // Get the current instance proxy
+    const route = useRoute();
+    const router = useRouter();
+    const $q = useQuasar(); // Use useQuasar to access $q.notify
+
+    const user = ref({
+      name: '',
+      email: '',
+      username: '',
+      status: ''
+    });
+
+
+
+    const authToken = Cookies.get('authToken'); // Get auth token from cookies
+
+
+    const fetchUserData = async () => {
+      try {
+        const userData = await getCurrentUser(authToken);
+        user.value = userData;
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+      }
+    };
+
+    onMounted(fetchUserData);
+
+
+
+    const goBack = () => {
+      router.go(-1)
+    }
     const label = ref("New File")
     const drawerLeft = ref(false);
     const fileContentArray = ref([
@@ -156,18 +192,70 @@ export default {
       },300)
     };
 
-    const createFile = ( ) => {
-      proxy.$editorCloudF.uploadFiles({
-        files: multipleFiles.value,
-        title: subject.value,
-        content: fileContentArray.value,
-        parent: "",
-        name: label.value
-      });
+
+
+    const createFile = () => {
+      if (route.params.dir) {
+        const Appload = proxy.$editorCloudF.uploadFiles({
+          files: multipleFiles.value,
+          title: subject.value,
+          content: fileContentArray.value,
+          parent: route.params.dir,
+          name: label.value
+        });
+
+        Appload.then((data) => {
+          // Use q.notify here for success
+          $q.notify({
+            type: 'positive',
+            message: 'File uploaded successfully!',
+            timeout: 2000,
+            position: 'top'
+          });
+          goBack()
+        }).catch((error) => {
+          console.log(error)
+          // Use q.notify here for error
+          $q.notify({
+            type: 'negative',
+            message: 'File upload failed. Please try again.',
+            timeout: 2000,
+            position: 'top'
+          });
+        });
+      } else {
+        proxy.$editorCloudF.uploadFiles({
+          files: multipleFiles.value,
+          title: subject.value,
+          content: fileContentArray.value,
+          parent: "",
+          name: label.value
+        }).then(() => {
+          // Use q.notify here for success
+          $q.notify({
+            type: 'positive',
+            message: 'File uploaded successfully!',
+            timeout: 2000,
+            position: 'top'
+          });
+          goBack()
+        }).catch((error) => {
+          console.log(error)
+          // Use q.notify here for error
+          $q.notify({
+            type: 'negative',
+            message: 'File upload failed. Please try again.',
+            timeout: 2000,
+            position: 'top'
+          });
+        });
+      }
     }
 
 
+
     return {
+      user,
       drawerLeft,
       fileContentArray,
       handleItemsUpdate,
@@ -180,7 +268,8 @@ export default {
       subject,
       updateSubject,
       getMultipleFiles,
-      createFile
+      createFile,
+      goBack
     };
   }
 };

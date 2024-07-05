@@ -6,7 +6,7 @@
     <q-toolbar>
       <q-btn flat @click="toggleDrawer"  style="rotate: 90deg;" round dense icon="leaderboard" />
       <div class="text-weight-bold q-mr-auto q-ml-md">{{ file.name }}</div>
-      <q-btn flat round dense icon="arrow_back" />
+      <q-btn flat round dense icon="arrow_back" @click="goBack" />
     </q-toolbar>
   </q-header>
   <q-layout view="hHh Lpr lff" container style="height: 100vh" >
@@ -48,6 +48,7 @@
 import BpmnModeler from './BpmnModeler.vue'; // Adjust the path as needed
 import { ref } from 'vue';
 import DraweComponent from "../../components/readFile_/LeftDrawer.vue"
+import { useRoute, useRouter } from 'vue-router';
 export default {
   data() {
     return {
@@ -80,6 +81,12 @@ export default {
 
   },
   setup() {
+    const router = useRouter();
+
+
+    const goBack = () => {
+      router.go(-1)
+    }
     const drawer = ref(false)
 
     const toggleDrawer = () => {
@@ -88,7 +95,9 @@ export default {
 
     return {
       drawer,
-      toggleDrawer
+      toggleDrawer,
+      goBack,
+
     }
   },
   components: {

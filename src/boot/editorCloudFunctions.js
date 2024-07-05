@@ -19,14 +19,12 @@ const uploadFiles = async ({ files, title, name, content, parent }) => {
   formData.append('name', name);
   formData.append('content', JSON.stringify(content)); // Assuming content is an object or array
   formData.append('parent', parent); // Assuming parent is a string or object ID
-  console.log("requesting")
   try {
     const response = await axios.post(`http://localhost:3000/directories/create-file?authToken=${token}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     });
-    console.log(response.data);
     return response.data;
   } catch (error) {
     console.error('Error uploading files:', error);

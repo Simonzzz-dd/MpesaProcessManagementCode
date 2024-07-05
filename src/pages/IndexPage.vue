@@ -19,7 +19,9 @@
         <q-toolbar class="bg-dark">
           <div class="text-subtitle text-white">Sponsored by: M-Pesa Ops</div>
           <q-space></q-space>
-          <q-btn flat round to="/content-managment" dense icon="add_circle" class="" />
+          <q-btn label="Add folder" no-caps flat color="primary" @click="prompt = true" />
+
+          <q-btn flat round :to="`/content-managment`" dense icon="add_circle" class="q-ml-sm" />
         </q-toolbar>
         <q-toolbar class="bg-accent text-dark q-pl-md ">
           <q-breadcrumbs class="appearBox" active-color="dark" style="font-size: 14px">
@@ -42,17 +44,17 @@
       <div  style="" class="flex flex-start bg-accent appearBox2">
         <div style="width: 100%;">
           <div class="q-pa-md row items-start q-gutter-md vertical-top">
-            <q-btn v-for="dir in directories" :key="dir._id" unelevated :label="dir.name.substring(0, 10)"
-              class="dir-buttons" stack color="grey-2" text-color="dark" style="width: 120px;" :to="'/dir/' + dir._id"
+            <q-btn v-for="dir in directories" :key="dir._id" :data-folder-id="dir._id"  unelevated :label="dir.name.substring(0, 10)"
+              class="dir-buttons appearBox2" stack color="grey-2" text-color="dark" style="width: 120px;" :to="'/dir/' + dir._id"
               no-caps>
               <q-avatar square size="42px">
                 <img src="/folder.png">
               </q-avatar>
             </q-btn>
-            <q-btn v-for="dir in files" :key="dir._id" style="width: 120px;" class="file-buttons"
+            <q-btn v-for="dir in files" :key="dir._id" :data-file-id="dir._id" style="width: 120px;" class="file-buttons"
               :label="dir.name.substring(0, 10)" unelevated stack no-caps color="grey-2" text-color="dark"
               :to="'/files/' + dir._id">
-              <q-avatar square size="42px">
+              <q-avatar  square size="42px">
                 <img src="/writing.png">
               </q-avatar>
             </q-btn>
@@ -61,8 +63,24 @@
 
       </div>
     </q-scroll-area>
-    <FolderContextMenu ref="dir_context" />
-    <FileContextMenu ref="file_context" />
+    <FolderContextMenu ref="dir_context" :deleteFolder="deleteFolder" />
+    <FileContextMenu ref="file_context" :deleteFile="deleteFile" />
+    <q-dialog v-model="prompt" persistent>
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Your Folder Name</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-input dense v-model="folderName" autofocus @keyup.enter="prompt = false" />
+        </q-card-section>
+
+        <q-card-actions align="right" class="text-primary">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat color="secondary" @click="addFolder"  label="Add Folder" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
   </div>
 </template>
@@ -88,7 +106,11 @@ export default {
     return {
       dir_context: ref(""),
       file_context: ref(""),
-      searchText: ref("")
+      searchText: ref(""),
+      currentFile: ref({data: ""}),
+      folderName: ref("Default"),
+      prompt: ref(false),
+      currentFolder: ref({data: ""}),
     }
   },
   methods: {
@@ -101,13 +123,16 @@ export default {
       }
     },
     onDirContextMenu() {
-
+      let currentFolder = this.currentFolder
       document.querySelectorAll(".dir-buttons").forEach(btn => {
         btn.addEventListener("contextmenu", e => {
           e.preventDefault()
           this.hideContext()
           let clientX = e.clientX;
           let clientY = e.clientY;
+
+          currentFolder.data = btn.dataset.folderId
+
           // Calculate the absolute position
           this.dir_context.$el.style.display = "block"
           this.dir_context.$el.classList.add('appearBox');
@@ -120,12 +145,15 @@ export default {
       })
     },
     onFileContextMenu() {
+      let currentFile = this.currentFile
       document.querySelectorAll(".file-buttons").forEach(btn => {
         btn.addEventListener("contextmenu", e => {
           e.preventDefault()
           this.hideContext()
           let clientX = e.clientX;
           let clientY = e.clientY;
+
+          currentFile.data = btn.dataset.fileId
 
           // Calculate the absolute position
           this.file_context.$el.style.display = "block"
@@ -136,11 +164,42 @@ export default {
           }, 300)
         })
       })
+    },
+    async deleteFile() {
+      try {
+        await this.$directories.deleteFileById(this.currentFile.data);
+        this.files = this.files.filter(file => file._id !== this.currentFile.data);
+        this.hideContext();
+      } catch (error) {
+        console.error('Error deleting file:', error.message);
+      }
+    },
+    async deleteFolder() {
+      try {
+        await this.$directories.deleteDirectoryById(this.currentFolder.data);
+        this.directories = this.directories.filter(dir => dir._id !== this.currentFolder.data);
+        this.hideContext();
+      } catch (error) {
+        console.error('Error deleting folder:', error.message);
+      }
+    },
+    async addFolder() {
+      if (!this.folderName) return;
+
+      try {
+        const newFolder = await this.$directories.createDirectory({ name: this.folderName });
+        this.directories.push(newFolder);
+        this.folderName = '';
+        this.prompt = false;
+      } catch (error) {
+        console.error('Error adding folder:', error.message);
+      }
     }
   },
   async created() {
     try {
       const data = await this.$directories.getRootItems();
+      this.dirFuncs = this.$directories
       this.directories = data.directories;
       this.files = data.files
       console.log(data)

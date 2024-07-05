@@ -34,11 +34,20 @@ const login = async ({ email, password }) => {
   }
 };
 
+const getCurrentUser = async (authToken) => {
+  try {
+    const response = await apiClient.get(`/auth/current-user?authToken=${authToken}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching current user:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
 import { boot } from 'quasar/wrappers';
 
 export default boot(({ app }) => {
   // for use inside Vue files (Options API) through this.$axios and this.$api
-  app.config.globalProperties.$auth = { signup, login };
+  app.config.globalProperties.$auth = { signup, login, getCurrentUser };
 });
 
-export { signup, login };
+export { signup, login, getCurrentUser };

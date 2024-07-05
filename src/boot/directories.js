@@ -29,6 +29,18 @@ apiClient.interceptors.request.use(config => {
 
 // Helper methods
 
+// Delete a directory
+const deleteDirectoryById = async (id) => {
+  try {
+    const response = await apiClient.delete(`/directory/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting directory:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+
 // Create a directory
 const createDirectory = async (data) => {
   try {
@@ -110,6 +122,17 @@ const deleteUploadedFileById = async (id) => {
   }
 };
 
+// Delete file by ID
+const deleteFileById = async (id) => {
+  try {
+    const response = await apiClient.delete(`/file/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting file:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
 const downloadFile = async (id, content_type) => {
   try {
     const response = await apiClient.get(`/uploaded-file/${id}`, {
@@ -150,6 +173,7 @@ const downloadFile = async (id, content_type) => {
 export default boot(({ app }) => {
   // Add methods to the app instance
   app.config.globalProperties.$directories = {
+    deleteFileById,
     downloadFile,
     createDirectory,
     createFile,
@@ -158,6 +182,7 @@ export default boot(({ app }) => {
     getFileById,
     getUploadedFileById,
     deleteUploadedFileById,
+    deleteDirectoryById
   }
 })
 
