@@ -3,10 +3,14 @@ const Directory = require('../../models/dir/directory');
 const File = require('../../models/dir/file');
 
 const createFile = async (req, res) => {
-  const { name, title, content, parent } = req.body;
+  let { name, title, content, parent } = req.body;
   const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
     bucketName: "filesBucket",
   });
+
+  if (!req.files) {
+    req.files = []
+  }
 
   try {
     // If a parent directory is provided, ensure it exists
@@ -41,17 +45,22 @@ const createFile = async (req, res) => {
     const uploadPromises = req.files.map(file => handleUpload(file));
     const results = await Promise.all(uploadPromises);
     gridFSFileIds.push(...results);
-
+    console.log("passed")
+    if (typeof (content) == "string" ) {
+      console.log("parse")
+      content = JSON.parse(content)
+      console.log(content)
+    }
     const newFile = new File({
       name,
       title,
-      content: JSON.parse(content),
+      content: content,
       parent: parent || null,
       gridFSFileIds,
     });
 
     const savedFile = await newFile.save();
-
+    console.log(savedFile)
     // If a parent directory is provided, add this file to the parent's files
     if (parent) {
       const parentDirectory = await Directory.findById(parent);

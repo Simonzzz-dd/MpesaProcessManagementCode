@@ -11,6 +11,10 @@ const userSchema = new mongoose.Schema({
       unique: true,
       trim: true,
     },
+    status: {
+      default: "Pending Active",
+      type: String
+    },
     email: {
       type: String,
       required: true,

@@ -8,7 +8,8 @@ const getDirectoryById = require('../../controllers/dir/get_dir');
 const getFileById = require('../../controllers/dir/get_file');
 const deleteFile = require('../../controllers/dir/delete_file');
 const getUploadedFileById = require('../../controllers/dir/get_uploaded_file');
-const deleteUploadedFileById = require('../../controllers/dir/deleteUploadedFile');
+const deleteUploadedFileById = require('../../controllers/dir/delete_uploaded_file.js');
+const deleteDirectory = require('../../controllers/dir/delete_dir');
 
 const storage = multer.memoryStorage(); // Store files in memory before processing
 const upload = multer({ storage });
@@ -34,6 +35,8 @@ dirRouter.delete('/uploaded-file/:id', deleteUploadedFileById);
 
 // Soft delete specific file by ID
 dirRouter.delete('/file/:id', deleteFile);
+
+dirRouter.delete('/directory/:id', deleteDirectory);
 
 
 module.exports = dirRouter;
