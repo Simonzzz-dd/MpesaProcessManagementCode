@@ -8,34 +8,52 @@ const logUserAction = require("../controllers/generic_functions/user_logs")
 
 // login a user
 const login = async (req, res) => {
-  const {email, password} = req.body
-  
-  try {
-    const user = await User.login(email, password)
+  const { email, password } = req.body;
 
-    // create a token
-    const token = createToken(user._id)
-    logUserAction(user._id, "User Auth", `login from ${req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress}`)
-    res.status(200).json({email, token, id: user._id})
+  try {
+    const user = await User.login(email, password);
+
+    // Create a token
+    const token = createToken(user._id);
+
+    // Log user action
+    logUserAction(user._id, "User Auth", `login from ${req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress}`);
+
+    // Fetch user roles
+    const userWithRoles = await User.findById(user._id)
+    
+
+    res.status(200).json({
+      email,
+      token,
+      id: user._id,
+      roles: user.roles
+    });
+
   } catch (error) {
-    res.status(404).json({error: error.message})
+    console.log(error.message);
+    res.status(404).json({ error: error.message });
   }
-}
+};
 
 // signup a user
 const signup = async (req, res) => {
-  const {email, password, username} = req.body
+  const { email, username, department, ticketId } = req.body;
 
   try {
-    const user = await User.signup(email, password, username)
-
-    // create a token
-    const token = createToken(user._id)
-
-    res.status(200).json({email, token, id: user._id})
+    const user = await User.signup(email, username, department, ticketId);
+    
+    res.status(201).json({
+      message: 'User registered successfully. Please wait for account activation or contact support.',
+      user: {
+        email: user.email,
+        username: user.username,
+        department: user.department,
+        status: user.status
+      }
+    });
   } catch (error) {
-    res.status(400).json({error: error.message})
+    res.status(400).json({ error: error.message });
   }
-}
-
+};
 module.exports = { signup, login }

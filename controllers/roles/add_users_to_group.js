@@ -1,51 +1,82 @@
 const Group = require('../../models/roles/group_roles');
 const User = require('../../models/user');
 
-const addUsersToGroup = async (req, res) => {
-    const { groupId, userIds } = req.body;
+const addUsersToGroups = async (req, res) => {
+  const { groupNames, usernames } = req.body;
 
-    try {
-        const group = await Group.findById(groupId).populate('parent');
-        if (!group) {
-            return res.status(404).json({ error: 'Group not found' });
-        }
-
-        // Check if the group has a parent
-        if (group.parent) {
-            const parentGroup = await Group.findById(group.parent._id);
-            if (!parentGroup) {
-                return res.status(400).json({ error: 'Parent group not found' });
-            }
-
-            // Ensure all users are members of the parent group
-            const invalidUserIds = userIds.filter(userId => !parentGroup.users.includes(userId));
-            if (invalidUserIds.length > 0) {
-                return res.status(400).json({ error: `Users must be members of the parent group: ${invalidUserIds.join(', ')}` });
-            }
-        }
-
-        // Check if users exist and add them to the group
-        const existingUsers = await User.find({ _id: { $in: userIds } });
-        if (existingUsers.length !== userIds.length) {
-            const missingUserIds = userIds.filter(userId => !existingUsers.some(user => user._id.equals(userId)));
-            return res.status(400).json({ error: `Some users do not exist: ${missingUserIds.join(', ')}` });
-        }
-
-        const usersToAdd = userIds.filter(userId => !group.users.includes(userId));
-        group.users.push(...usersToAdd);
-        await group.save();
-
-        // Update each user to include the new group
-        await User.updateMany(
-            { _id: { $in: usersToAdd } },
-            { $addToSet: { groups: group._id } }
-        );
-
-        res.status(200).json(group);
-    } catch (error) {
-        console.error('Error adding users to group:', error);
-        res.status(500).json({ error: 'Error adding users to group' });
+  console.log('addUsersToGroups')
+  try {
+    // Fetch all groups
+    const groups = await Group.find({ name: { $in: groupNames } }).populate('parent');
+    if (groups.length !== groupNames.length) {
+      const missingGroups = groupNames.filter(name => !groups.some(g => g.name === name));
+      return res.status(404).json({ error: `Some groups not found: ${missingGroups.join(', ')}` });
     }
+
+    // Fetch all users
+    const users = await User.find({ username: { $in: usernames } });
+    if (users.length !== usernames.length) {
+      const missingUsers = usernames.filter(name => !users.some(u => u.username === name));
+      return res.status(404).json({ error: `Some users not found: ${missingUsers.join(', ')}` });
+    }
+
+    // Process each group
+    const updatePromises = groups.map(async (group) => {
+      // Add users to the current group
+      const usersToAdd = users.filter(user => !group.users.includes(user._id));
+      group.users.push(...usersToAdd.map(u => u._id));
+
+      // Update allDescendantUsers for top-level ancestor
+      let currentGroup = group;
+      while (currentGroup.parent) {
+        currentGroup = await Group.findById(currentGroup.parent);
+      }
+
+      // Now currentGroup is the top-level ancestor
+      const existingGroupIndex = currentGroup.allDescendantUsers.findIndex(
+        item => item.group.toString() === group._id.toString()
+      );
+
+      if (existingGroupIndex !== -1) {
+        // Update existing entry
+        const existingUsers = currentGroup.allDescendantUsers[existingGroupIndex].users;
+        usersToAdd.forEach(user => {
+          if (!existingUsers.includes(user._id)) {
+            existingUsers.push(user._id);
+          }
+        });
+      } else {
+        // Add new entry
+        currentGroup.allDescendantUsers.push({
+          group: group._id,
+          users: usersToAdd.map(u => u._id)
+        });
+      }
+
+
+
+      await currentGroup.save();
+      await group.save();
+
+      return {
+        group: group.name,
+        usersAdded: usersToAdd.map(u => u.username)
+      };
+    });
+
+    const results = await Promise.all(updatePromises);
+
+    // Update users with their new groups
+    await User.updateMany(
+      { _id: { $in: users.map(u => u._id) } },
+      { $addToSet: { groups: { $each: groups.map(group => group._id) } } }
+    );
+
+    res.status(200).json({ results });
+  } catch (error) {
+    console.error('Error adding users to groups:', error);
+    res.status(500).json({ error: 'Error adding users to groups', message: error.message });
+  }
 };
 
-module.exports = addUsersToGroup;
+module.exports = addUsersToGroups;

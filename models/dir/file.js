@@ -2,6 +2,21 @@ const mongoose = require('mongoose');
 
 // Define the File schema
 const fileSchema = new mongoose.Schema({
+  version: {
+    type: Number,
+  },
+  isActiveVersion: {
+    type: Boolean,
+    default: true,
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  versionController: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'FileVersion',
+  },
   deleted: {
     type: Boolean,
     default: false
@@ -38,6 +53,31 @@ const fileSchema = new mongoose.Schema({
     ref: 'uploads.files',
     required: false,
   }],
+  approvalRequests: [{
+    remark: {
+      type: String,
+      required: false,
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
+    requestedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'approvedByAdmin', 'rejected'],
+    default: 'pending'
+  }
 }, {
   timestamps: true // Adds createdAt and updatedAt timestamps
 });

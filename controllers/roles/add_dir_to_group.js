@@ -17,7 +17,7 @@ const addDirectoryToGroup = async (req, res) => {
       if (!directory) {
         throw new Error(`Directory with id ${dirId} not found`);
       }
-      console.log(directory.name)
+     
       // Add the group to the directory if not already present
       if (!directory.groups.includes(groupId)) {
         directory.groups.push(groupId);

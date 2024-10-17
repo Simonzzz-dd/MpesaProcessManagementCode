@@ -4,6 +4,7 @@ const User = require('../../models/user');
 const createNewGroup = async (req, res) => {
     const { name, userPermissions, description, parentId } = req.body;
 
+
     try {
         // Check if parent group exists and get its permissions
         let parentPermissions = [];

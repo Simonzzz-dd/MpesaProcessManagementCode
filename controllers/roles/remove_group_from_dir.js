@@ -26,7 +26,6 @@ const removeGroupFromDirectory = async (req, res) => {
   try {
     // Get all child groups recursively
     const allGroups = await getChildGroups(groupId);
-    console.log(allGroups)
     // Remove each group from the directory and its children recursively
     for (const group of allGroups) {
       await removeGroupFromDirectoryRecursively(dirId, group);

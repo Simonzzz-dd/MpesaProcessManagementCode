@@ -10,7 +10,7 @@ const groupSchema = new mongoose.Schema({
   },
   userPermissions: {
     type: [String], // Array of permissions within the group
-    enum: ['read', 'write', 'delete', 'invite_member'],
+    enum: ['read', 'write', 'invite_member', "checker"],
     default: [] // Default to an empty array
   },
   description: {
@@ -29,7 +29,19 @@ const groupSchema = new mongoose.Schema({
   children: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Group'
-  }]
+  }],
+  allDescendantUsers: 
+    [{
+      group: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Group'
+      },
+      users: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }]
+    }]
+  
 }, {
   timestamps: true // Adds createdAt and updatedAt timestamps
 });
