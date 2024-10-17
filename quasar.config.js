@@ -93,7 +93,7 @@ module.exports = configure(function (/* ctx */) {
     framework: {
       config: {},
       plugins: [
-        'Notify'
+        'Notify', 'Dialog'
       ],
 
       // iconSet: 'material-icons', // Quasar icon set

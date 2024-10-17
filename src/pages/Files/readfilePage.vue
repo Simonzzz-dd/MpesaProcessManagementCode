@@ -10,7 +10,7 @@
     </q-toolbar>
   </q-header>
   <q-layout view="hHh Lpr lff" container style="height: 100vh" >
-  <DraweComponent :gridFSFileInfos="file.gridFSFileInfos" :drawer="drawer" />
+  <DraweComponent :gridFSFileInfos="file.gridFSFileInfos" :file="file" :drawer="drawer" />
   <q-page-container style="padding: 0;">
     <q-page style="padding: 0;">
       <q-card  flat>
@@ -66,8 +66,8 @@ export default {
     const fileId = this.$route.params.file; // Assuming you pass the file ID through the route
     try {
       this.file = await this.$directories.getFileById(fileId)
-      this.tab = this.file.content[0]._id
       console.log(this.file)
+      this.tab = this.file.content[0]._id
 
     } catch (error) {
       console.error('Error fetching file:', error.message);

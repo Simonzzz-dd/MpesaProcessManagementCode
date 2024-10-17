@@ -19,9 +19,9 @@
         <q-toolbar class="bg-dark">
           <div class="text-subtitle text-white">Sponsored by: M-Pesa Ops</div>
           <q-space></q-space>
-          <q-btn label="Add folder" no-caps flat color="primary" @click="prompt = true" />
+          <q-btn v-if="isAdmin || isEditor" label="Add folder" no-caps flat color="primary" @click="prompt = true" />
 
-          <q-btn flat round :to="`/content-managment`" dense icon="add_circle" class="q-ml-sm" />
+          <q-btn v-if="isAdmin || isEditor"  flat round :to="`/content-managment`" dense icon="add_circle" class="q-ml-sm" />
         </q-toolbar>
         <q-toolbar class="bg-accent text-dark q-pl-md ">
           <q-breadcrumbs class="appearBox" active-color="dark" style="font-size: 14px">
@@ -40,31 +40,40 @@
       </div>
     </div>
     <q-separator></q-separator>
-    <q-scroll-area class="bg-accent" style="height: calc(100vh - 300px)">
-      <div  style="" class="flex flex-start bg-accent appearBox2">
-        <div style="width: 100%;">
-          <div class="q-pa-md row items-start q-gutter-md vertical-top">
-            <q-btn v-for="dir in directories" :key="dir._id" :data-folder-id="dir._id"  unelevated :label="dir.name.substring(0, 10)"
-              class="dir-buttons appearBox2" stack color="grey-2" text-color="dark" style="width: 120px;" :to="'/dir/' + dir._id"
-              no-caps>
-              <q-avatar square size="42px">
-                <img src="/folder.png">
-              </q-avatar>
-            </q-btn>
-            <q-btn v-for="dir in files" :key="dir._id" :data-file-id="dir._id" style="width: 120px;" class="file-buttons"
-              :label="dir.name.substring(0, 10)" unelevated stack no-caps color="grey-2" text-color="dark"
-              :to="'/files/' + dir._id">
-              <q-avatar  square size="42px">
-                <img src="/writing.png">
-              </q-avatar>
-            </q-btn>
-          </div>
-        </div>
-
+    <div class="row">
+      <!-- Directory Tree Column -->
+      <div class="col-3 bg-grey-2" style="height: calc(100vh - 300px)">
+        <DirectoryTree />
       </div>
-    </q-scroll-area>
-    <FolderContextMenu ref="dir_context" :deleteFolder="deleteFolder" />
-    <FileContextMenu ref="file_context" :deleteFile="deleteFile" />
+
+      <!-- Scroll Area Column -->
+      <div class="col-9">
+        <q-scroll-area class="bg-accent" style="height: calc(100vh - 300px)">
+          <div class="flex flex-start bg-accent appearBox2">
+            <div style="width: 100%;">
+              <div class="q-pa-md row items-start q-gutter-md vertical-top">
+                <q-btn v-for="dir in directories" :key="dir._id" :data-folder-id="dir._id" unelevated
+                  :label="dir.name.substring(0, 10)" class="dir-buttons appearBox2" stack color="grey-2"
+                  text-color="dark" style="width: 120px;" :to="'/dir/' + dir._id" no-caps>
+                  <q-avatar square size="42px">
+                    <img src="/folder.png">
+                  </q-avatar>
+                </q-btn>
+                <q-btn v-for="dir in files" :key="dir._id" :data-file-id="dir._id" style="width: 120px;"
+                  class="file-buttons" :label="dir.name.substring(0, 10)" unelevated stack no-caps color="grey-2"
+                  text-color="dark" :to="'/files/' + dir._id">
+                  <q-avatar square size="42px">
+                    <img src="/writing.png">
+                  </q-avatar>
+                </q-btn>
+              </div>
+            </div>
+          </div>
+        </q-scroll-area>
+      </div>
+    </div>
+    <FolderContextMenu :permissions="currentPermissions.data" ref="dir_context" :folderId="currentFolder.data"  :deleteFolder="deleteFolder" :directoryId="currentFolder.data" />
+    <FileContextMenu v-if="isAdmin || isEditor" ref="file_context" :editFile="editFile"  :file="currentFile"  :deleteFile="deleteFile" />
     <q-dialog v-model="prompt" persistent>
       <q-card style="min-width: 350px">
         <q-card-section>
@@ -86,23 +95,42 @@
 </template>
 
 <script>
-import { ref } from "vue"
+import { ref, onMounted } from "vue"
 import FolderContextMenu from "../components/dir/FolderContextMenu.vue"
 import FileContextMenu from "../components/dir/FileContextMenu.vue"
+import DirectoryTree from "../components/dir/DirectoryTree.vue"
+import Cookies from "js-cookie"
+
 
 export default {
   components: {
     FolderContextMenu,
-    FileContextMenu
+    FileContextMenu,
+    DirectoryTree
   },
   data() {
     return {
-
       directories: [],
-      files: []
+      files: [],
+      currentPermissions: {data: []},
     }
   },
   setup() {
+    const isAdmin = ref(false);
+    const isViewer = ref(false);
+    const isAuditor = ref(false);
+    const isEditor = ref(false);
+
+
+
+
+    onMounted(() => {
+      isAdmin.value = Cookies.get('isAdmin') === 'true';
+      isViewer.value = Cookies.get('isViewer') === 'true';
+      isAuditor.value = Cookies.get('isAuditor') === 'true';
+      isEditor.value = Cookies.get('isEditor') === 'true';
+    });
+
     return {
       dir_context: ref(""),
       file_context: ref(""),
@@ -111,8 +139,13 @@ export default {
       folderName: ref("Default"),
       prompt: ref(false),
       currentFolder: ref({data: ""}),
+      isAdmin,
+      isViewer,
+      isAuditor,
+      isEditor,
     }
   },
+
   methods: {
     hideContext() {
       if (!this.file_context?.$el.classList.contains("none")) {
@@ -124,6 +157,8 @@ export default {
     },
     onDirContextMenu() {
       let currentFolder = this.currentFolder
+      let directories = this.directories
+      let currentPermissions = this.currentPermissions
       document.querySelectorAll(".dir-buttons").forEach(btn => {
         btn.addEventListener("contextmenu", e => {
           e.preventDefault()
@@ -132,7 +167,8 @@ export default {
           let clientY = e.clientY;
 
           currentFolder.data = btn.dataset.folderId
-
+          let folderData = directories.find(d => d._id == currentFolder.data)
+          currentPermissions.data = folderData.permissions
           // Calculate the absolute position
           this.dir_context.$el.style.display = "block"
           this.dir_context.$el.classList.add('appearBox');
@@ -146,6 +182,7 @@ export default {
     },
     onFileContextMenu() {
       let currentFile = this.currentFile
+      let files = this.files
       document.querySelectorAll(".file-buttons").forEach(btn => {
         btn.addEventListener("contextmenu", e => {
           e.preventDefault()
@@ -154,7 +191,7 @@ export default {
           let clientY = e.clientY;
 
           currentFile.data = btn.dataset.fileId
-
+          currentFile.obj = files.filter(file => file._id == btn.dataset.fileId );
           // Calculate the absolute position
           this.file_context.$el.style.display = "block"
           this.file_context.$el.classList.add('appearBox');
@@ -164,6 +201,9 @@ export default {
           }, 300)
         })
       })
+    },
+    async editFile () {
+      this.$router.push("/edit-file/" + this.currentFile.data)
     },
     async deleteFile() {
       try {
@@ -199,6 +239,7 @@ export default {
   async created() {
     try {
       const data = await this.$directories.getRootItems();
+      console.log(data)
       this.dirFuncs = this.$directories
       this.directories = data.directories;
       this.files = data.files
@@ -213,8 +254,6 @@ export default {
       dirContextMenu()
       fileContextMenu()
       // Context Remove
-      console.log(this.dir_context)
-
       setTimeout(() => {
         document.querySelector(".main-div").addEventListener("click", (e) => {
           this.hideContext()

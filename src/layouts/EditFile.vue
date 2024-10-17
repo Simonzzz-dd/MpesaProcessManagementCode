@@ -1,10 +1,13 @@
 <template>
-
+  <div>
     <q-layout view="hHh Lpr lff" container style="height: 100vh">
       <q-header :class="$q.dark.isActive ? 'bg-dark' : 'bg-dark'">
         <q-toolbar>
           <q-btn flat @click="drawerLeft = !drawerLeft" style="rotate: 90deg;" round dense icon="leaderboard" />
           <div class="text-weight-bold q-mr-auto q-ml-md">Content Management Page</div>
+          <q-btn flat round dense icon="attachment" @click="showUploadedFiles = true">
+            <q-badge color="red" floating>{{ gridFSFileInfos.length }}</q-badge>
+          </q-btn>
           <q-btn flat round dense icon="arrow_back" @click="goBack" />
         </q-toolbar>
       </q-header>
@@ -48,51 +51,40 @@
 
       <q-page-container>
         <q-page class="bg-accent">
-          <ContentPage :updateBPMN="updateBPMN" :items="fileContentArray" :updateText="updateText"
-            :updateSubtitle="updateSubtitle" :deleteItem="deleteItem" :updateSubject="updateSubject" :subject="subject"
-            :getMultipleFiles="getMultipleFiles" :createFile="createFile" />
+          <ContentPage v-if="fileContentArray.length > 0" :updateBPMN="updateBPMN" :items="fileContentArray"
+            :updateText="updateText" :updateSubtitle="updateSubtitle" :deleteItem="deleteItem"
+            :updateSubject="updateSubject" :subject="subject" :getMultipleFiles="getMultipleFiles"  :createFile="updateFile" />
         </q-page>
       </q-page-container>
 
-      <q-page-sticky v-if="$route.params.dir" position="bottom-right" :offset="[18, 18]">
-        <q-btn fab icon="person_add" color="dark" @click="openApproversDialog" />
-      </q-page-sticky>
-       <!-- Approvers Dialog -->
-       <q-dialog v-model="approversDialog">
+      <!-- New popup for uploaded files -->
+      <q-dialog v-model="showUploadedFiles">
         <q-card style="min-width: 350px">
           <q-card-section>
-            <div class="text-h6">Select Approvers</div>
+            <div class="text-h6">Uploaded Files</div>
           </q-card-section>
 
           <q-card-section class="q-pt-none">
-            <q-select
-              v-model="selectedApprovers"
-              :options="approverOptions"
-              option-value="_id"
-              option-label="name"
-              multiple
-              emit-value
-              map-options
-              use-chips
-              label="Approvers"
-            >
-              <template v-slot:no-option>
-                <q-item>
-                  <q-item-section class="text-grey">
-                    No approvers found
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
+            <q-list>
+              <q-item v-for="file in gridFSFileInfos" :key="file._id">
+                <q-item-section>
+                  <q-item-label>{{ file.filename.filename }}</q-item-label>
+                  <q-item-label caption>{{ formatFileSize(file.length) }}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-btn flat round color="red" icon="delete" @click="deleteFileAttachment(file._id)" />
+                </q-item-section>
+              </q-item>
+            </q-list>
           </q-card-section>
 
           <q-card-actions align="right">
-            <q-btn flat label="Cancel" color="primary" v-close-popup />
-            <q-btn flat label="Select" color="primary" @click="selectApprovers" v-close-popup />
+            <q-btn flat label="Close" color="primary" v-close-popup />
           </q-card-actions>
         </q-card>
       </q-dialog>
     </q-layout>
+  </div>
 </template>
 
 <script>
@@ -100,25 +92,23 @@ import { uid } from 'uid';
 import DragDrop from '../pages/contentManagment/dragDrop.vue';
 import ContentPage from "../pages/contentManagment/contentPage.vue";
 import { ref, getCurrentInstance, onMounted } from 'vue';
-import { createFile } from 'src/boot/directories';
 import { useRoute, useRouter } from 'vue-router';
-import { useQuasar } from 'quasar'; // Import Notify from Quasar
-import { getCurrentUser } from 'boot/auth'; // Import the getCurrentUser function
+import { useQuasar } from 'quasar';
+import { getCurrentUser } from 'boot/auth';
 import Cookies from 'js-cookie';
-import { getApprovers } from 'src/boot/roles'; // Import the getApprovers function
 import ip from 'src/boot/ips';
-
 
 export default {
   components: {
     DragDrop,
     ContentPage
   },
-  setup() {
-    const { proxy } = getCurrentInstance(); // Get the current instance proxy
+
+  async setup() {
+    const { proxy } = getCurrentInstance();
     const route = useRoute();
     const router = useRouter();
-    const $q = useQuasar(); // Use useQuasar to access $q.notify
+    const $q = useQuasar();
 
     const user = ref({
       name: '',
@@ -127,15 +117,7 @@ export default {
       status: ''
     });
 
-
-    const approversDialog = ref(false);
-    const approverOptions = ref([]);
-    const selectedApprovers = ref([]);
-
-
-
-    const authToken = Cookies.get('authToken'); // Get auth token from cookies
-
+    const authToken = Cookies.get('authToken');
 
     const fetchUserData = async () => {
       try {
@@ -146,43 +128,26 @@ export default {
       }
     };
 
-    onMounted(fetchUserData);
+    const fileId = route.params.id;
+    const file = await proxy.$directories.getFileById(fileId);
 
-
-
-    const goBack = () => {
-      router.go(-1)
-    }
-    const label = ref("New File")
+    const label = ref(file.name);
     const drawerLeft = ref(false);
-    const fileContentArray = ref([
-      {
-        "subtitle": "Process Design and Development",
-        "text": "Based on the gathered requirements, the process design phase involves creating detailed workflows and process maps. Various tools and methodologies, such as BPMN (Business Process Model and Notation), are used to visually represent the process flow. Design reviews and validation sessions are conducted to ensure the process meets all requirements and adheres to best practices. Any necessary adjustments are made based on feedback.",
-        "label": "str" + uid()
-      },
-      {
-        "subtitle": "Implementation and Integration",
-        "text": "In this final phase, the designed process is implemented within the organization. This involves configuring necessary tools and technologies, training staff, and integrating the new process with existing systems. Pilot tests are conducted to identify any issues or inefficiencies, and adjustments are made accordingly. Once the process is fully operational, continuous monitoring and optimization are carried out to ensure it remains effective and efficient.",
-        "label": "str" + uid()
-      },
-      {
-        "subtitle": "Implementation and Integration",
-        "text": "In this final phase, the designed process is implemented within the organization. This involves configuring necessary tools and technologies, training staff, and integrating the new process with existing systems. Pilot tests are conducted to identify any issues or inefficiencies, and adjustments are made accordingly. Once the process is fully operational, continuous monitoring and optimization are carried out to ensure it remains effective and efficient.",
-        "label": "str" + uid()
-      },
-      {
-        "subtitle": "Implementation and Integration",
-        "text": "In this final phase, the designed process is implemented within the organization. This involves configuring necessary tools and technologies, training staff, and integrating the new process with existing systems. Pilot tests are conducted to identify any issues or inefficiencies, and adjustments are made accordingly. Once the process is fully operational, continuous monitoring and optimization are carried out to ensure it remains effective and efficient.",
-        "label": "str" + uid()
-      }
-    ]);
-    const multipleFiles = ref({})
-    const subject = ref("Whats the subject?")
+    const fileContentArray = ref(file.content.map(f => ({
+      subtitle: f.subtitle,
+      label: 'c' + f._id,
+      text: f.text,
+      BPMN_string: f.BPMN_string
+    })));
+    const multipleFiles = ref({});
+    const subject = ref(file.title || "What's the subject?");
+    const gridFSFileInfos = ref(file.gridFSFileInfos || []);
+    const showUploadedFiles = ref(false);
 
     const handleItemsUpdate = (newItems) => {
       fileContentArray.value = newItems;
     };
+
     const updateText = async (index, value) => {
       let updatedValue = value;
       fileContentArray.value[index].text = updatedValue;
@@ -230,8 +195,8 @@ export default {
 
     const addItem = () => {
       const newItem = {
-        "subtitle": "Requirement Gathering and Analysis",
-        "text": "<div>In this critical phase, detailed business requirements are collected through various means such as interviews, surveys, and workshops. Stakeholders from different departments provide input to ensure comprehensive coverage of needs. These requirements are then documented and analyzed to identify key features and functionalities needed in the process. Any potential risks or challenges are also identified at this stage.</div>",
+        "subtitle": "New Section",
+        "text": "<div>Add your content here.</div>",
         label: "str" + uid().toString()
       };
       fileContentArray.value.push(newItem);
@@ -254,36 +219,22 @@ export default {
       }, 300);
     };
 
-    const createFile = async () => {
-      // Process each item in fileContentArray
+    const updateFile = async () => {
       for (let index = 0; index < fileContentArray.value.length; index++) {
         let updatedValue = fileContentArray.value[index].text;
-
-        // Get list of all base64 images in the text
         const base64Images = getBase64ImagesFromText(updatedValue);
-        console.log('Base64 images found:', base64Images);
-
-        // Convert base64 images to Blobs
         const imageBlobs = base64Images.map(base64ToBlob);
-        console.log('Image Blobs created:', imageBlobs.length);
 
-        // Upload the image blobs
         if (imageBlobs.length > 0) {
           try {
             const result = await proxy.$editorCloudF.uploadImages(imageBlobs);
-            console.log('Uploaded image IDs:', result.fileIds);
-
-            // Replace base64 images with uploaded image IDs
             base64Images.forEach((base64, i) => {
               const fileId = result.fileIds[i];
 
               const newUrl = `${ip}/directories/uploaded-file/${fileId}`;
               updatedValue = updatedValue.replace(base64, newUrl);
             });
-
-            // Update the content with the new image URLs
             fileContentArray.value[index].text = updatedValue;
-
           } catch (error) {
             console.error('Failed to upload images:', error);
             $q.notify({
@@ -292,46 +243,35 @@ export default {
               timeout: 2000,
               position: 'top'
             });
-            return; // Exit the function if image upload fails
+            return;
           }
         }
       }
 
-      // Now proceed with file creation
       try {
-        if (route.params.dir) {
-          await proxy.$editorCloudF.uploadFiles({
-            files: multipleFiles.value,
-            title: subject.value,
-            content: fileContentArray.value,
-            parent: route.params.dir,
-            name: label.value,
-            approvalRequests: selectedApprovers.value.map(email => ({ email: email, status: 'pending' }))
 
-          });
-        } else {
-          await proxy.$editorCloudF.uploadFiles({
-            files: multipleFiles.value,
-            title: subject.value,
-            content: fileContentArray.value,
-            parent: "",
-            name: label.value,
+        const result = await proxy.$editorCloudF.editFile({
+          fileId: fileId,
+          name: label.value,
+          title: subject.value,
+          content: fileContentArray.value,
+          files: Object.values(multipleFiles.value)
+        });
 
-          });
-        }
+        console.log('File updated successfully:', result);
 
         $q.notify({
           type: 'positive',
-          message: 'File uploaded successfully!',
+          message: 'File updated successfully!',
           timeout: 2000,
           position: 'top'
         });
         goBack();
       } catch (error) {
-        console.error('Failed to upload file:', error);
+        console.error('Failed to update file:', error);
         $q.notify({
           type: 'negative',
-          message: 'File upload failed. Please try again.',
+          message: 'File update failed. Please try again.',
           timeout: 2000,
           position: 'top'
         });
@@ -339,34 +279,41 @@ export default {
     };
 
 
-    // Approvers Dialog is only if file in not being create at root
 
-
-    const openApproversDialog = async () => {
+    const deleteFileAttachment = async (attachmentId) => {
       try {
-        const dirId = route.params.dir; // Replace this with actual file ID when available
-        const approvers = await getApprovers(dirId);
-        console.log(approvers)
-        approverOptions.value = approvers.map( d => d.email);
-        approversDialog.value = true;
+        await proxy.$directories.deleteFileAttachments(fileId, [attachmentId]);
+        gridFSFileInfos.value = gridFSFileInfos.value.filter(file => file._id !== attachmentId);
+        $q.notify({
+          type: 'positive',
+          message: 'File attachment deleted successfully',
+          timeout: 2000,
+          position: 'top'
+        });
       } catch (error) {
-        console.error('Failed to fetch approvers:', error);
+        console.error('Failed to delete file attachment:', error);
         $q.notify({
           type: 'negative',
-          message: 'Failed to fetch approvers. Please try again.',
+          message: 'Failed to delete file attachment',
           timeout: 2000,
           position: 'top'
         });
       }
     };
 
-    const selectApprovers = () => {
-      console.log('Selected approvers:', selectedApprovers.value);
-      // Here you can add logic to handle the selected approvers
-      // For example, you might want to store them in a ref to use when creating the file
+    const formatFileSize = (bytes) => {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
+    const goBack = () => {
+      router.go(-1);
+    };
 
+    await fetchUserData();
 
     return {
       user,
@@ -382,18 +329,16 @@ export default {
       subject,
       updateSubject,
       getMultipleFiles,
-      createFile,
+      updateFile,
       goBack,
-      approversDialog,
-      approverOptions,
-      selectedApprovers,
-      openApproversDialog,
-      selectApprovers
+      gridFSFileInfos,
+      showUploadedFiles,
+      deleteFileAttachment,
+      formatFileSize
     };
   }
 };
 </script>
-
 <style>
 .draggable {
   display: flex;

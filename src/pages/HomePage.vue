@@ -17,9 +17,9 @@
   </div>
   <div class="bg-secondary text-white">
     <q-toolbar class="bg-dark">
-      <div class="text-subtitle text-white">Sponsored by: M-Pesa Ops</div>
+      <div class="text-subtitle text-white">Sponsored by: M-Pesa Operations Team</div>
       <q-space></q-space>
-      <q-btn flat round to="/" dense icon="info" class="" />
+      <q-btn flat round dense icon="info" @click="showTributes = true" />
     </q-toolbar>
   </div>
   <div class="row bg-accent q-pa-md appearBox" style="min-height: calc(100vh - 240px)">
@@ -51,7 +51,6 @@
               <q-item-label class="text-dark">{{ user.username }}</q-item-label>
             </q-item-section>
           </q-item>
-
           <q-item>
             <q-item-section avatar>
               <q-icon name="toggle_on" />
@@ -62,10 +61,7 @@
             </q-item-section>
           </q-item>
         </q-list>
-        <q-separator/>
-        <q-card-actions>
-          <q-btn no-caps icon="settings" label="Settings" color="dark" flat></q-btn>
-        </q-card-actions>
+
       </q-card>
     </div>
     <div class="col">
@@ -91,6 +87,28 @@
       </q-card>
     </div>
   </div>
+
+  <!-- Tributes Dialog -->
+  <q-dialog v-model="showTributes">
+    <q-card style="width: 700px; max-width: 80vw;">
+      <q-card-section class="row items-center q-pb-none">
+        <div class="text-h6">Tributes</div>
+        <q-space />
+        <q-btn icon="close" flat round dense v-close-popup />
+      </q-card-section>
+
+      <q-card-section>
+        <p>The M-Pesa Catalog is a collaborative effort, made possible by the contributions of many talented individuals and teams. We would like to express our heartfelt gratitude to:</p>
+       <ul>
+       <li>Head of Operations: Lucrecia Muianga</li>
+       <li>Dev Ops: Ivan Simon</li>
+       <li>Quality Control: Mussa Opaite</li>
+       <li>Support team: Process Automation and Business Efficiency Team</li>
+       </ul>
+       <p>Together, we're revolutionizing M-Pesa processes and enhancing operational efficiency.</p>
+       </q-card-section>
+    </q-card>
+  </q-dialog>
 </template>
 
 <script>
@@ -111,6 +129,7 @@ export default {
       username: '',
       status: ''
     });
+    const showTributes = ref(false);
 
     const authToken = Cookies.get('authToken'); // Get auth token from cookies
 
@@ -127,6 +146,7 @@ export default {
 
     return {
       user,
+      showTributes
     };
   }
 }

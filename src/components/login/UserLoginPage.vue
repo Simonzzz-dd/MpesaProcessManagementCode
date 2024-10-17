@@ -43,9 +43,11 @@
 <script>
 import { ref } from 'vue'
 import Cookies from 'js-cookie'
+import { useQuasar } from 'quasar'
 
 export default {
   setup () {
+    const $q = useQuasar()
     const name = ref(null)
     const password = ref('')
     const isPwd = ref(true)
@@ -60,7 +62,8 @@ export default {
       name,
       password,
       isPwd,
-      onReset
+      onReset,
+      $q
     }
   },
   methods: {
@@ -71,10 +74,24 @@ export default {
         // Set the token in a cookie
         Cookies.set('authToken', response.token, { expires: 0.0208333 }) // Expires in 30 minutes
         this.$router.push("/")
-        // Handle successful login (e.g., store token, redirect)
+
+        // Show success notification
+        this.$q.notify({
+          type: 'positive',
+          message: 'Login successful',
+          position: 'top',
+          timeout: 2000
+        })
       } catch (error) {
         console.error('Error during login:', error)
-        // Handle login error
+
+        // Show error notification
+        this.$q.notify({
+          type: 'negative',
+          message: 'Login failed. Please check your credentials and try again.',
+          position: 'top',
+          timeout: 3000
+        })
       }
     }
   }

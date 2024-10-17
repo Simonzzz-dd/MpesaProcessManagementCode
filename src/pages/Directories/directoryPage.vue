@@ -1,9 +1,9 @@
 <template>
-  <div class="main-div ">
+  <div class="main-div">
     <div class="q-pa-none">
       <div class="bg-dark">
         <q-card class="bg-dark q-pt-xl" style="border:0" flat>
-          <div class="image-avatar-1 bg-secondary" style="border-radius: 100%; ">
+          <div class="image-avatar-1 bg-secondary">
             <img src="/catalog.png" class="appearBox"
               style="position: absolute; object-position: fit; height: 60%; width: 60%">
           </div>
@@ -12,18 +12,21 @@
             <div class="text-h6">M-Pesa Business Catalog</div>
             <div class="text-caption">you ensure that your code is future-proof and more readable</div>
           </q-card-section>
-
         </q-card>
       </div>
-      <div class="bg-secondary text-white ">
+      <div class="bg-secondary text-white">
         <q-toolbar class="bg-dark">
           <div class="text-subtitle text-white">Sponsored by: M-Pesa Ops</div>
           <q-space></q-space>
-          <q-btn label="Add folder" no-caps flat color="primary" @click="prompt = true" />
-
-          <q-btn flat round :to="`/content-managment/${$route.params.dir}`" dense icon="add_circle" class="q-ml-sm" />
+          <q-btn v-if="hasInviteMemberPermission" label="Create Group" no-caps flat color="primary"
+            @click="openCreateGroupDialog" />
+          <q-btn v-if="hasInviteMemberPermission" label="Add User to Group" no-caps flat color="primary"
+            @click="openAddUserToGroupDialog" />
+          <q-btn v-if="hasInviteMemberPermission" label="Add folder" no-caps flat color="primary" @click="prompt = true" />
+          <q-btn v-if="hasWritePermission" flat round :to="`/content-managment/${$route.params.dir}`" dense
+            icon="add_circle" class="q-ml-sm" />
         </q-toolbar>
-        <q-toolbar class="bg-accent text-dark q-pl-md ">
+        <q-toolbar class="bg-accent text-dark q-pl-md">
           <q-breadcrumbs class="appearBox" active-color="dark" style="font-size: 14px">
             <q-breadcrumbs-el label="Home" icon="home" />
             <q-breadcrumbs-el :label="content.name" icon="folder" />
@@ -40,31 +43,72 @@
       </div>
     </div>
     <q-separator></q-separator>
-    <q-scroll-area class="bg-accent" style="height: calc(100vh - 300px)">
-      <div  style="" class="flex flex-start bg-accent appearBox2">
-        <div style="width: 100%;">
-          <div class="q-pa-md row items-start q-gutter-md vertical-top">
-            <q-btn v-for="dir in directories" :key="dir._id" :data-folder-id="dir._id"  unelevated :label="dir.name.substring(0, 10)"
-              class="dir-buttons appearBox2" stack color="grey-2" text-color="dark" style="width: 120px;" :to="'/dir/' + dir._id"
-              no-caps>
-              <q-avatar square size="42px">
-                <img src="/folder.png">
-              </q-avatar>
-            </q-btn>
-            <q-btn v-for="dir in files" :key="dir._id" :data-file-id="dir._id" style="width: 120px;" class="file-buttons"
-              :label="dir.name.substring(0, 10)" unelevated stack no-caps color="grey-2" text-color="dark"
-              :to="'/files/' + dir._id">
-              <q-avatar  square size="42px">
-                <img src="/writing.png">
-              </q-avatar>
-            </q-btn>
-          </div>
-        </div>
-
+    <div class="row">
+      <!-- Directory Tree Column -->
+      <div class="col-3 bg-grey-2" style="height: calc(100vh - 300px); overflow: auto;">
+        <DirectoryTree @node-selected="handleNodeSelection" />
       </div>
-    </q-scroll-area>
-    <FolderContextMenu ref="dir_context" :deleteFolder="deleteFolder" />
-    <FileContextMenu ref="file_context" :deleteFile="deleteFile" />
+
+      <!-- Content Column -->
+      <div class="col-9">
+        <q-scroll-area class="bg-accent" style="height: calc(100vh - 300px)">
+          <div class="flex flex-start bg-accent appearBox2">
+            <div style="width: 100%;">
+              <div class="q-pa-md row items-start q-gutter-md vertical-top">
+                <q-btn v-for="dir in directories" :key="dir._id" :data-folder-id="dir._id" unelevated
+                  :label="dir.name.substring(0, 10)" class="dir-buttons appearBox2" stack color="grey-2"
+                  text-color="dark" style="width: 120px;" :to="'/dir/' + dir._id" no-caps>
+                  <q-avatar square size="42px">
+                    <img src="/folder.png">
+                  </q-avatar>
+                </q-btn>
+                <q-btn v-for="file in files" :key="file._id" :data-file-id="file._id" style="width: 120px;"
+                  class="file-buttons" :label="file.name.substring(0, 10)" unelevated stack no-caps color="grey-2"
+                  text-color="dark" :to="'/files/' + file._id">
+                  <q-avatar square size="42px">
+                    <img src="/writing.png">
+                  </q-avatar>
+                </q-btn>
+              </div>
+            </div>
+          </div>
+
+          <!-- My Groups section -->
+          <div class="text-caption q-ml-md q-mt-md">
+            My Groups
+          </div>
+          <div v-if="userGroups.length > 0" class="q-pl-md q-pt-sm row items-start q-gutter-md vertical-top">
+            <div  v-for="group in userGroups" :key="group.groupId">
+            <q-btn :label="group.groupName" unelevated
+              class="group-buttons appearBox2" stack color="primary" text-color="dark" style="width: 120px; min-height: 120px" no-caps
+              @click="fetchUsersInGroup(group.groupId)">
+              <q-avatar square size="42px">
+                <img src="/group.png">
+              </q-avatar>
+
+            </q-btn>
+            <div class="text-grey" v-for="r in group.roles" :key="r">{{ r }}</div>
+            </div>
+          </div>
+          <div class="q-pl-md q-pt-sm " v-else>
+            <q-btn unelevated class="group-buttons appearBox2" stack color="primary" text-color="dark" style="width: 120px; min-height: 120px" no-caps
+            >
+            <q-avatar square size="42px">
+              <img src="/error.png">
+            </q-avatar>
+            <div>No groups</div>
+          </q-btn>
+          </div>
+        </q-scroll-area>
+      </div>
+    </div>
+
+    <FolderContextMenu v-if="hasWritePermission" ref="dir_context" :deleteFolder="deleteFolder" :openFolder="openFolder"
+      :renameFolder="renameFolder"  :permissions="content.permissions"
+      :folderId="currentFolder.data" :directoryId="directoryId" />
+    <FileContextMenu v-if="hasWritePermission" ref="file_context" :file="currentFile" :editFile="editFile" :deleteFile="deleteFile" />
+
+    <!-- Folder Creation Dialog -->
     <q-dialog v-model="prompt" persistent>
       <q-card style="min-width: 350px">
         <q-card-section>
@@ -77,160 +121,507 @@
 
         <q-card-actions align="right" class="text-primary">
           <q-btn flat label="Cancel" v-close-popup />
-          <q-btn flat color="secondary" @click="addFolder"  label="Add Folder" />
+          <q-btn flat color="secondary" @click="addFolder" label="Add Folder" />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
+    <!-- Group Creation Dialog -->
+    <q-dialog v-model="groupPrompt" persistent>
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Create New Group</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-input dense v-model="groupName" label="Group Name" autofocus @keyup.enter="groupPrompt = false" />
+          <q-input dense v-model="groupDescription" label="Description" type="textarea" />
+          <q-select dense v-model="groupPermissions" label="Permissions" multiple :options="permissionOptions" />
+          <q-select dense v-model="parentGroupId" label="Parent Group (optional)" :options="groupOptions" />
+        </q-card-section>
+
+        <q-card-actions align="right" class="text-primary">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat color="secondary" @click="createGroup" label="Create Group" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Dialog for adding users to groups -->
+    <q-dialog v-model="addUserToGroupPrompt" persistent>
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Add Users to Group</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-select dense v-model="selectedUsers" label="Select Users" multiple :options="availableUsers"
+            option-label="username" option-value="_id" />
+          <q-select dense v-model="selectedGroups" label="Select Groups"  :options="availableGroups"
+            option-label="name" option-value="_id" />
+        </q-card-section>
+
+        <q-card-actions align="right" class="text-primary">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat color="secondary" @click="addUsersToGroups" label="Add Users" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Dialog to display users in a group -->
+    <q-dialog v-model="showUsersInGroupDialog"  persistent>
+      <q-card style="width: 100%; max-width: 350px;">
+        <q-card-section>
+          <div class="text-h6">{{ selectedGroupName }}</div>
+          <div class="text-subtitle2">{{ selectedGroupDescription }}</div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="text-h6">Child Groups</div>
+          <q-list>
+            <q-item v-for="childGroup in childGroups" :key="childGroup._id" clickable @click="fetchUsersInGroup(childGroup._id)">
+              <q-item-section>{{ childGroup.name }}</q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="text-h6">Users</div>
+          <q-list>
+            <q-item v-for="user in usersInGroup" :key="user._id">
+              <q-item-section>{{ user.username }}</q-item-section>
+              <q-item-section>{{ user.email }}</q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-actions align="center" class="text-primary">
+          <q-pagination
+            v-model="currentPage"
+            :max="totalPages"
+            :max-pages="5"
+            boundary-links
+            @update:model-value="onPageChange"
+          />
+        </q-card-actions>
+
+        <q-card-actions align="right" class="text-primary">
+          <q-btn flat label="Close" v-close-popup @click="resetGroupDialog" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
-
-
 <script>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import FolderContextMenu from "../../components/dir/FolderContextMenu.vue"
 import FileContextMenu from "../../components/dir/FileContextMenu.vue"
+import DirectoryTree from "../../components/dir/DirectoryTree.vue"
+
 export default {
   components: {
     FolderContextMenu,
-    FileContextMenu
+    FileContextMenu,
+    DirectoryTree
   },
   setup() {
+    const content = ref({});
+    const hasWritePermission = computed(() => {
+      return content.value.permissions && content.value.permissions.includes('write');
+    });
+
+    const hasInviteMemberPermission = computed(() => {
+      return content.value.permissions && content.value.permissions.includes('invite_member');
+    });
+
+    const userGroups = ref([]);
+    const groupOptions = computed(() => userGroups.value.map(group => ({
+      label: group.groupName,
+      value: group.groupId
+    })));
+
+    const addUserToGroupPrompt = ref(false);
+    const selectedUsers = ref([]);
+    const selectedGroups = ref([]);
+    const availableUsers = ref([]);
+    const availableGroups = ref([]);
+
+    const showUsersInGroupDialog = ref(false);
+    const usersInGroup = ref([]);
+    const selectedGroupName = ref('');
+    const selectedGroupDescription = ref('');
+    const childGroups = ref([]);
+    const currentPage = ref(1);
+    const totalPages = ref(1);
+    const selectedGroupId = ref(null);
+
     return {
-      dir_context: ref(""),
-      file_context: ref(""),
-      searchText: ref(""),
-      currentFile: ref({data: ""}),
-      folderName: ref("Default"),
+      hasInviteMemberPermission,
+      dir_context: ref(null),
+      file_context: ref(null),
+      search: ref(""),
+      currentFile: ref({ data: "" }),
+      folderName: ref(""),
       prompt: ref(false),
-      currentFolder: ref({data: ""}),
+      currentFolder: ref({ data: "" }),
+      hasWritePermission,
+      content,
+      groupPrompt: ref(false),
+      groupName: ref(""),
+      groupDescription: ref(""),
+      groupPermissions: ref([]),
+      parentGroupId: ref(null),
+      permissionOptions: ['read', 'write', 'delete', 'invite_member'],
+      userGroups,
+      groupOptions,
+      addUserToGroupPrompt,
+      selectedUsers,
+      selectedGroups,
+      availableUsers,
+      availableGroups,
+      showUsersInGroupDialog,
+      usersInGroup,
+      selectedGroupName,
+      selectedGroupDescription,
+      childGroups,
+      currentPage,
+      totalPages,
+      selectedGroupId
     }
   },
   data() {
     return {
-      text: '',
-      content: [],
       directories: [],
-      files: []
+      files: [],
+      groups: [],
+      directoryId: this.$route.params.dir
     }
   },
   async created() {
     await this.fetchDirectory();
-    let dirContextMenu = this.onDirContextMenu
-    let fileContextMenu = this.onFileContextMenu
-    setTimeout(() => {
-      dirContextMenu()
-      fileContextMenu()
-      // Context Remove
-      console.log(this.dir_context)
-
-      setTimeout(() => {
-        document.querySelector(".main-div").addEventListener("click", (e) => {
-          this.hideContext()
-        })
-      }, 100)
-
-
-    }, 100)
+    await this.fetchUserGroups();
+    if (this.hasWritePermission) {
+      this.$nextTick(() => {
+        this.setupContextMenus();
+      });
+    }
+    console.log(this.files)
   },
   watch: {
-    '$route.params.dir': 'fetchDirectory'
+    '$route.params.dir': {
+      immediate: true,
+      handler: 'handleDirectoryChange'
+    }
   },
   methods: {
-    async fetchDirectory() {
-      const directoryId = this.$route.params.dir; // Assuming you pass the directory ID through the route
-      try {
-        this.content = await this.$directories.getDirectoryById(directoryId);
-        console.log(this.content);
-        this.files = this.content.files;
-        this.directories = this.content.children;
-        console.log(this.directories);
-      } catch (error) {
-        console.error('Error fetching directory:', error.message);
+    async handleDirectoryChange(newDirId, oldDirId) {
+      if (newDirId !== oldDirId) {
+        await this.fetchDirectory(newDirId);
+        await this.fetchUserGroups(newDirId);
       }
     },
-    hideContext() {
-      if (!this.file_context?.$el.classList.contains("none")) {
-        this.file_context.$el.style.display = "none"
+    openCreateGroupDialog() {
+      this.groupPrompt = true;
+    },
+    async createGroup() {
+      if (!this.hasWritePermission || !this.groupName) return;
+      const directoryId = this.$route.params.dir;
+      const groupData = {
+        name: this.groupName,
+        description: this.groupDescription,
+        userPermissions: this.groupPermissions,
+        users: [],
+        parentGroupId: this.parentGroupId ? this.parentGroupId.value : null
+      };
+
+      try {
+        const newGroup = await this.$roles.createGroupInDirectory(directoryId, groupData);
+        this.userGroups.push({
+          groupId: newGroup._id,
+          groupName: newGroup.name,
+          roles: newGroup.userPermissions
+        });
+
+        this.groupName = '';
+        this.groupDescription = '';
+        this.groupPermissions = [];
+        this.parentGroupId = null;
+        this.groupPrompt = false;
+
+        this.$q.notify({
+          color: 'positive',
+          textColor: 'white',
+          icon: 'cloud_done',
+          message: 'Group created successfully'
+        });
+      } catch (error) {
+        console.error('Error creating group:', error.message);
+        this.$q.notify({
+          color: 'negative',
+          textColor: 'white',
+          icon: 'warning',
+          message: 'Failed to create group: ' + error.message
+        });
       }
-      if (!this.dir_context?.$el.classList.contains("none")) {
-        this.dir_context.$el.style.display = "none"
+    },
+    async fetchDirectory() {
+      const directoryId = this.$route.params.dir;
+      try {
+        this.content = await this.$directories.getDirectoryById(directoryId);
+        this.files = this.content.files;
+        this.directories = this.content.children;
+        this.groups = this.content.groups || [];
+        this.$nextTick(() => {
+          if (this.hasWritePermission) {
+            this.setupContextMenus();
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching directory:', error.message);
+        this.$q.notify({
+          color: 'negative',
+          textColor: 'white',
+          icon: 'warning',
+          message: 'Failed to fetch directory: ' + error.message
+        });
+      }
+    },
+    async fetchUserGroups() {
+      const directoryId = this.$route.params.dir;
+      try {
+        this.userGroups = await this.$roles.get_current_directory_groups_user_in(directoryId);
+        console.log(this.userGroups)
+      } catch (error) {
+        console.error('Error fetching user groups:', error);
+        this.$q.notify({
+          color: 'negative',
+          textColor: 'white',
+          icon: 'warning',
+          message: 'Failed to fetch user groups: ' + error.message
+        });
+      }
+    },
+    setupContextMenus() {
+      this.onDirContextMenu();
+      this.onFileContextMenu();
+      document.querySelector(".main-div").addEventListener("click", this.hideContext);
+    },
+    hideContext() {
+      if (this.file_context?.$el) {
+        this.file_context.$el.style.display = "none";
+      }
+      if (this.dir_context?.$el) {
+        this.dir_context.$el.style.display = "none";
       }
     },
     onDirContextMenu() {
-      let currentFolder = this.currentFolder
-      document.querySelectorAll(".dir-buttons").forEach(btn => {
-        btn.addEventListener("contextmenu", e => {
-          e.preventDefault()
-          this.hideContext()
-          let clientX = e.clientX;
-          let clientY = e.clientY;
-
-          currentFolder.data = btn.dataset.folderId
-
-          // Calculate the absolute position
-          this.dir_context.$el.style.display = "block"
-          this.dir_context.$el.classList.add('appearBox');
-          this.dir_context.$el.style.transform = `translate(${clientX + window.scrollX + "px"}, ${clientY + window.scrollY + "px"})`;
-          setTimeout(() => {
-            this.dir_context.$el.classList.remove('appearBox');
-          }, 300)
-
-        })
-      })
+      document.querySelectorAll(".dir-buttons").forEach(this.attachDirContextMenu);
+    },
+    attachDirContextMenu(btn) {
+      btn.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        this.hideContext();
+        const { clientX, clientY } = e;
+        const folderId = btn.dataset.folderId;
+        this.showContextMenu(this.dir_context.$el, clientX, clientY, folderId);
+      });
     },
     onFileContextMenu() {
-      let currentFile = this.currentFile
       document.querySelectorAll(".file-buttons").forEach(btn => {
         btn.addEventListener("contextmenu", e => {
-          e.preventDefault()
-          this.hideContext()
-          let clientX = e.clientX;
-          let clientY = e.clientY;
-
-          currentFile.data = btn.dataset.fileId
-
-          // Calculate the absolute position
-          this.file_context.$el.style.display = "block"
-          this.file_context.$el.classList.add('appearBox');
-          this.file_context.$el.style.transform = `translate(${clientX + window.scrollX + "px"}, ${clientY + window.scrollY + "px"})`;
-          setTimeout(() => {
-            this.file_context.$el.classList.remove('appearBox');
-          }, 300)
-        })
-      })
+          e.preventDefault();
+          this.hideContext();
+          const { clientX, clientY } = e;
+          this.currentFile.data = btn.dataset.fileId;
+          this.currentFile.obj = this.files.filter(file => file._id == btn.dataset.fileId );
+          this.showContextMenu(this.file_context.$el, clientX, clientY);
+        });
+      });
     },
-    async deleteFile() {
+    showContextMenu(el, x, y, folderId) {
+      if (folderId) {
+        this.currentFolder.data = folderId;
+      }
+      el.style.display = "block";
+      el.classList.add('appearBox');
+      el.style.transform = `translate(${x + window.scrollX}px, ${y + window.scrollY}px)`;
+      setTimeout(() => {
+        el.classList.remove('appearBox');
+      }, 300);
+    },
+    async deleteFile(fileId) {
+      console.log(this.currentFile.data )
+      if (!this.hasWritePermission) return;
       try {
-        await this.$directories.deleteFileById(this.currentFile.data);
-        this.files = this.files.filter(file => file._id !== this.currentFile.data);
+        await this.$directories.deleteFileById(this.currentFile.data );
+        this.files = this.files.filter(file => file._id !== this.currentFile.data );
         this.hideContext();
       } catch (error) {
         console.error('Error deleting file:', error.message);
       }
     },
-    async deleteFolder() {
+    async editFile () {
+      this.$router.push("/edit-file/" + this.currentFile.data)
+    },
+    async deleteFolder(folderId) {
+      if (!this.hasWritePermission) return;
       try {
-        await this.$directories.deleteDirectoryById(this.currentFolder.data);
-        this.directories = this.directories.filter(dir => dir._id !== this.currentFolder.data);
+        await this.$directories.deleteDirectoryById(folderId);
+        this.directories = this.directories.filter(dir => dir._id !== folderId);
         this.hideContext();
       } catch (error) {
         console.error('Error deleting folder:', error.message);
       }
     },
-    async addFolder() {
-      if (!this.folderName) return;
+    openFolder(folderId) {
+      this.$router.push(`/dir/${folderId}`);
+    },
+    async renameFolder(folderId) {
+      const newName = prompt('Enter new folder name:');
+      if (newName) {
+        try {
+          await this.$directories.renameDirectory(folderId, newName);
+          const folder = this.directories.find(dir => dir._id === folderId);
+          if (folder) folder.name = newName;
+        } catch (error) {
+          console.error('Error renaming folder:', error.message);
+        }
+      }
+    },
 
+    async addFolder() {
+      if (!this.hasWritePermission || !this.folderName) return;
       try {
-        const newFolder = await this.$directories.createDirectory({ name: this.folderName, parent: this.$route.params.dir });
+        const newFolder = await this.$directories.createDirectory({
+          name: this.folderName,
+          parent: this.$route.params.dir
+        });
         this.directories.push(newFolder);
         this.folderName = '';
         this.prompt = false;
+
+        this.$nextTick(() => {
+          const newFolderElement = document.querySelector(`[data-folder-id="${newFolder._id}"]`);
+          if (newFolderElement) {
+            this.attachDirContextMenu(newFolderElement);
+          }
+        });
       } catch (error) {
         console.error('Error adding folder:', error.message);
       }
-    }
+    },
+    handleNodeSelection(node) {
+      console.log('Selected node:', node);
+      // Implement logic for handling node selection from the DirectoryTree
+    },
+    openAddUserToGroupDialog() {
+      this.addUserToGroupPrompt = true;
+      this.fetchAvailableUsersAndGroups();
+    },
+    async fetchAvailableUsersAndGroups() {
+      const directoryId = this.$route.params.dir;
+      try {
+        this.availableUsers = await this.$roles.getAllUsersInCurrentDirectoryGroup(directoryId);
+        const groupsData = await this.$roles.getAllGroupsAndChildrenInDirectory(directoryId);
+        this.availableGroups = this.flattenGroups(groupsData);
+      } catch (error) {
+        console.error('Error fetching users and groups:', error);
+        this.$q.notify({
+          color: 'negative',
+          textColor: 'white',
+          icon: 'warning',
+          message: 'Failed to fetch users and groups: ' + error.message
+        });
+      }
+    },
+    flattenGroups(groups, parentId = null) {
+      let flatGroups = [];
+      for (const group of groups) {
+        flatGroups.push({
+          _id: group.groupId,
+          name: group.name,
+          parentId: parentId
+        });
+        if (group.children && group.children.length > 0) {
+          flatGroups = flatGroups.concat(this.flattenGroups(group.children, group.groupId));
+        }
+      }
+      return flatGroups;
+    },
+    async addUsersToGroups() {
+      if (this.selectedUsers.length === 0 || this.selectedGroups.length === 0) {
+        this.$q.notify({
+          color: 'warning',
+          textColor: 'white',
+          icon: 'warning',
+          message: 'Please select both users and groups'
+        });
+        return;
+      }
 
+      const directoryId = this.$route.params.dir;
+      console.log(directoryId)
+
+      try {
+
+        await this.$roles.addUsersToGroupFromDirectory(directoryId, this.selectedGroups._id, this.selectedUsers.map(user => user.userId));
+
+
+        this.$q.notify({
+          color: 'positive',
+          textColor: 'white',
+          icon: 'check_circle',
+          message: 'Users added to groups successfully'
+        });
+
+        this.addUserToGroupPrompt = false;
+        this.selectedUsers = [];
+        this.selectedGroups = [];
+        await this.fetchUserGroups();
+      } catch (error) {
+        console.error('Error adding users to groups:', error);
+        this.$q.notify({
+          color: 'negative',
+          textColor: 'white',
+          icon: 'error',
+          message: 'Failed to add users to groups: ' + error.message
+        });
+      }
+    },
+    async fetchUsersInGroup(groupId, page = 1) {
+      try {
+        this.selectedGroupId = groupId;
+        const groupResponse = await this.$roles.getUsersInGroup(groupId, page);
+
+        this.usersInGroup = groupResponse.users;
+        this.selectedGroupName = groupResponse.group.name;
+        this.selectedGroupDescription = groupResponse.group.description;
+        this.childGroups = groupResponse.group.children || [];
+        this.currentPage = groupResponse.currentPage;
+        this.totalPages = groupResponse.totalPages;
+
+        this.showUsersInGroupDialog = true;
+      } catch (error) {
+        console.error('Error fetching users in group:', error);
+        this.$q.notify({
+          color: 'negative',
+          textColor: 'white',
+          icon: 'warning',
+          message: 'Failed to fetch users in group: ' + error.message
+        });
+      }
+    },
+    async onPageChange(newPage) {
+      await this.fetchUsersInGroup(this.selectedGroupId, newPage);
+    },
+    resetGroupDialog() {
+      this.selectedGroupId = null;
+      this.currentPage = 1;
+      this.usersInGroup = [];
+      this.childGroups = [];
+      this.selectedGroupName = '';
+      this.selectedGroupDescription = '';
+    }
   }
 }
 </script>

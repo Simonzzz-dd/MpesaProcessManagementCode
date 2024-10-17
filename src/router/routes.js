@@ -3,6 +3,7 @@ const routes = [
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
     children: [
+      { path: '/create-group/', component: () => import('pages/CreateGroup/CreateGroup.vue') },
       { path: '/home/', component: () => import('pages/IndexPage.vue') },
       { path: 'dir/:dir', component: () => import('pages/Directories/directoryPage.vue') },
       { path: 'files/:file', component: () => import('pages/Files/readfilePage.vue') },
@@ -16,8 +17,16 @@ const routes = [
     component: () => import('layouts/ContentManagment.vue')
   },
   {
+    path: '/edit-file/:id',
+    component: () => import('layouts/EditFile.vue')
+  },
+  {
     path: '/content-managment/:dir',
     component: () => import('layouts/ContentManagment.vue')
+  },
+  {
+    path: '/create-new-version/:id',
+    component: () => import('layouts/CreateNewVersion.vue')
   },
   {
     path: '/login',

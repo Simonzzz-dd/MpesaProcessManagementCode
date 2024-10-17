@@ -1,9 +1,10 @@
 import { boot } from 'quasar/wrappers'
 import axios from 'axios'
 import Cookies from 'js-cookie';
+import ip from './ips';
 
 const apiClient = axios.create({
-  baseURL: 'http://localhost:3000/directories', // Base URL for your API
+  baseURL: `${ip}/directories`, // Base URL for your API
   headers: {
     'Content-Type': 'application/json',
   },
@@ -63,6 +64,25 @@ const createFile = async (formData) => {
     return response.data;
   } catch (error) {
     console.error('Error creating file:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+const uploadImagesFromBody = async (files) => {
+  try {
+    const formData = new FormData();
+    files.forEach((file, index) => {
+      formData.append('files', file);
+    });
+
+    const response = await apiClient.post('/upload-images-from-body', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading images:', error.response ? error.response.data : error.message);
     throw error;
   }
 };
@@ -133,6 +153,19 @@ const deleteFileById = async (id) => {
   }
 };
 
+
+const getDirectoryStructure = async () => {
+  try {
+    const response = await apiClient.get('/directory-structure');
+    console.log(response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching directory structure:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+
 const downloadFile = async (id, content_type) => {
   try {
     const response = await apiClient.get(`/uploaded-file/${id}`, {
@@ -168,11 +201,94 @@ const downloadFile = async (id, content_type) => {
   }
 };
 
+const updateFile = async (data) => {
+  try {
+    const formData = new FormData();
+    formData.append('fileId', data.fileId);
+    formData.append('name', data.name);
+    formData.append('title', data.title);
+    formData.append('content', JSON.stringify(data.content));
+
+    if (data.files) {
+      Object.keys(data.files).forEach(key => {
+        formData.append('files', data.files[key]);
+      });
+    }
+
+    const response = await apiClient.put('/update-file', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating file:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+
+const deleteFileAttachments = async (fileId, gridFSFileIds) => {
+  try {
+    const response = await apiClient.post('/delete-file-attachments', { fileId, gridFSFileIds });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting file attachments:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+
+const updateApprovalRequest = async (fileId, requestId, status, reason) => {
+  try {
+    const response = await apiClient.post(`/${fileId}/approval-requests/${requestId}`, { status, reason });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating approval request:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+const getAllFileVersions = async (fileId) => {
+  try {
+    const response = await apiClient.get(`/file-versions/${fileId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching file versions:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+
+const getDirectoriesByGroup = async (groupId) => {
+  try {
+    const response = await apiClient.get(`/get-directories-by-group/${groupId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching directories by group:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+const getUnassociatedRootDirectories = async (groupId) => {
+  try {
+    const response = await apiClient.get(`/unassociated-root-directories/${groupId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching unassociated root directories:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+
 
 // Export the helper methods
 export default boot(({ app }) => {
   // Add methods to the app instance
   app.config.globalProperties.$directories = {
+    getUnassociatedRootDirectories,
+    updateFile,
+    uploadImagesFromBody,
     deleteFileById,
     downloadFile,
     createDirectory,
@@ -182,11 +298,17 @@ export default boot(({ app }) => {
     getFileById,
     getUploadedFileById,
     deleteUploadedFileById,
-    deleteDirectoryById
+    deleteDirectoryById,
+    getDirectoryStructure,
+    deleteFileAttachments,
+    updateApprovalRequest,
+    getAllFileVersions,
+    getDirectoriesByGroup
   }
 })
 
 export {
+  uploadImagesFromBody,
   downloadFile,
   createDirectory,
   createFile,
@@ -195,4 +317,12 @@ export {
   getFileById,
   getUploadedFileById,
   deleteUploadedFileById,
+  getDirectoryStructure,
+  updateFile,
+  deleteFileAttachments,
+  updateApprovalRequest,
+  getAllFileVersions,
+  getDirectoriesByGroup,
+  getUnassociatedRootDirectories,
+
 }

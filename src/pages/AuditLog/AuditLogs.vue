@@ -1,7 +1,7 @@
 <template>
   <div class="q-pa-md bg-accent appearBox2" style="height: 100vh;">
     <q-card class="bg-white q-pt-md" flat>
-      <div class="image-avatar-1 bg-dark" style="border-radius: 100%; ">
+      <div class="image-avatar-1 bg-dark" style="border-radius: 100%;">
         <img src="/checklist.png" style="position: absolute; object-position: fit; height: 60%; width: 60%">
       </div>
 
@@ -10,13 +10,72 @@
         <div class="text-caption">Ensure that your code is future-proof and more readable</div>
       </q-card-section>
 
-      <q-card-actions align="left">
-        <FromDateTime />
-        <ToDateTime />
-        <q-space></q-space>
-        <div style="width: 200px;">
-          <div class="text-caption text-grey" style="padding-left: 11px;">Search by user</div>
-          <q-input filled v-model="text" bg-color="grey-1" color="white" dense placeholder="email" >
+      <q-card-actions align="left" class="row q-gutter-sm">
+        <div class="col-grow">
+          <div class="text-caption text-grey">From Date</div>
+          <q-input dense filled v-model="fromDate" @update:model-value="onFilterChange">
+            <template v-slot:prepend>
+              <q-icon name="event" class="cursor-pointer">
+                <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-date v-model="fromDate" mask="YYYY-MM-DD HH:mm">
+                    <div class="row items-center justify-end">
+                      <q-btn v-close-popup label="Close" color="primary" flat />
+                    </div>
+                  </q-date>
+                </q-popup-proxy>
+              </q-icon>
+            </template>
+            <template v-slot:append>
+              <q-icon name="access_time" class="cursor-pointer">
+                <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-time v-model="fromDate" mask="YYYY-MM-DD HH:mm" format24h>
+                    <div class="row items-center justify-end">
+                      <q-btn v-close-popup label="Close" color="primary" flat />
+                    </div>
+                  </q-time>
+                </q-popup-proxy>
+              </q-icon>
+            </template>
+          </q-input>
+        </div>
+
+        <div class="col-grow">
+          <div class="text-caption text-grey">To Date</div>
+          <q-input dense filled v-model="toDate" @update:model-value="onFilterChange">
+            <template v-slot:prepend>
+              <q-icon name="event" class="cursor-pointer">
+                <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-date v-model="toDate" mask="YYYY-MM-DD HH:mm">
+                    <div class="row items-center justify-end">
+                      <q-btn v-close-popup label="Close" color="primary" flat />
+                    </div>
+                  </q-date>
+                </q-popup-proxy>
+              </q-icon>
+            </template>
+            <template v-slot:append>
+              <q-icon name="access_time" class="cursor-pointer">
+                <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-time v-model="toDate" mask="YYYY-MM-DD HH:mm" format24h>
+                    <div class="row items-center justify-end">
+                      <q-btn v-close-popup label="Close" color="primary" flat />
+                    </div>
+                  </q-time>
+                </q-popup-proxy>
+              </q-icon>
+            </template>
+          </q-input>
+        </div>
+
+        <div class="col-grow">
+          <div class="text-caption text-grey">Search by user</div>
+          <q-input
+            filled
+            v-model="userSearch"
+            dense
+            placeholder="email"
+            @update:model-value="onFilterChange"
+          >
             <template v-slot:append>
               <q-icon color="primary" name="person" />
             </template>
@@ -26,21 +85,22 @@
 
       <q-table
         flat
-        dense
+        bordered
         ref="tableRef"
-        :class="tableClass"
-        tabindex="0"
-        title=""
+        title="Audit Logs"
         :rows="rows"
         :columns="columns"
-        row-key="id"
+        row-key="_id"
         v-model:pagination="pagination"
+        :loading="loading"
         :filter="filter"
+        binary-state-sort
+        @request="onRequest"
       >
         <template v-slot:top-right>
-          <q-input borderless dense debounce="300" v-model="filter" color="primary" label="Search">
+          <q-input borderless dense debounce="300" v-model="filter" placeholder="Search">
             <template v-slot:append>
-              <q-icon color="grey" name="search" />
+              <q-icon name="search" />
             </template>
           </q-input>
         </template>
@@ -50,75 +110,91 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
-import FromDateTime from "../../components/AuditLog/FromDateTime.vue"
-import ToDateTime from "../../components/AuditLog/ToDateTime.vue"
+import { ref, onMounted, watch } from 'vue'
+import { getUserLogs } from 'src/boot/roles'
 
 const columns = [
-  { name: 'user', align: 'left', label: 'User', field: 'user', sortable: true },
-  { name: 'action', align: 'left', label: 'Action', field: 'action', sortable: true },
-  { name: 'timestamp', align: 'left', label: 'Timestamp', field: 'timestamp', sortable: true }
-]
-
-const rows = [
-  { id: 1, user: 'john.doe@example.com', action: 'Logged in', timestamp: '2023-07-01 10:00:00' },
-  { id: 2, user: 'jane.smith@example.com', action: 'Viewed report', timestamp: '2023-07-01 10:05:00' },
-  { id: 3, user: 'john.doe@example.com', action: 'Logged out', timestamp: '2023-07-01 10:15:00' },
-  { id: 4, user: 'emma.jones@example.com', action: 'Logged in', timestamp: '2023-07-01 10:20:00' },
-  { id: 5, user: 'michael.brown@example.com', action: 'Downloaded file', timestamp: '2023-07-01 10:25:00' },
-  { id: 6, user: 'john.doe@example.com', action: 'Uploaded file', timestamp: '2023-07-01 10:30:00' },
-  { id: 7, user: 'sarah.wilson@example.com', action: 'Edited profile', timestamp: '2023-07-01 10:35:00' },
-  { id: 8, user: 'daniel.martin@example.com', action: 'Deleted record', timestamp: '2023-07-01 10:40:00' },
-  { id: 9, user: 'jane.smith@example.com', action: 'Created report', timestamp: '2023-07-01 10:45:00' },
-  { id: 10, user: 'michael.brown@example.com', action: 'Logged out', timestamp: '2023-07-01 10:50:00' },
-  { id: 11, user: 'emma.jones@example.com', action: 'Logged in', timestamp: '2023-07-01 11:00:00' },
-  { id: 12, user: 'john.doe@example.com', action: 'Viewed report', timestamp: '2023-07-01 11:05:00' },
-  { id: 13, user: 'daniel.martin@example.com', action: 'Logged out', timestamp: '2023-07-01 11:10:00' },
-  { id: 14, user: 'sarah.wilson@example.com', action: 'Logged in', timestamp: '2023-07-01 11:15:00' },
-  { id: 15, user: 'michael.brown@example.com', action: 'Edited settings', timestamp: '2023-07-01 11:20:00' },
-  { id: 16, user: 'jane.smith@example.com', action: 'Logged out', timestamp: '2023-07-01 11:25:00' },
-  { id: 17, user: 'emma.jones@example.com', action: 'Uploaded document', timestamp: '2023-07-01 11:30:00' },
-  { id: 18, user: 'john.doe@example.com', action: 'Logged in', timestamp: '2023-07-01 11:35:00' },
-  { id: 19, user: 'sarah.wilson@example.com', action: 'Created report', timestamp: '2023-07-01 11:40:00' },
-  { id: 20, user: 'daniel.martin@example.com', action: 'Viewed report', timestamp: '2023-07-01 11:45:00' },
-  { id: 21, user: 'michael.brown@example.com', action: 'Downloaded file', timestamp: '2023-07-01 11:50:00' },
-  { id: 22, user: 'emma.jones@example.com', action: 'Logged out', timestamp: '2023-07-01 11:55:00' },
-  { id: 23, user: 'john.doe@example.com', action: 'Logged in', timestamp: '2023-07-01 12:00:00' },
-  { id: 24, user: 'jane.smith@example.com', action: 'Edited profile', timestamp: '2023-07-01 12:05:00' },
-  { id: 25, user: 'sarah.wilson@example.com', action: 'Deleted record', timestamp: '2023-07-01 12:10:00' },
-  { id: 26, user: 'daniel.martin@example.com', action: 'Uploaded file', timestamp: '2023-07-01 12:15:00' },
-  { id: 27, user: 'michael.brown@example.com', action: 'Logged out', timestamp: '2023-07-01 12:20:00' },
-  { id: 28, user: 'emma.jones@example.com', action: 'Logged in', timestamp: '2023-07-01 12:25:00' },
-  { id: 29, user: 'john.doe@example.com', action: 'Viewed report', timestamp: '2023-07-01 12:30:00' },
-  { id: 30, user: 'sarah.wilson@example.com', action: 'Downloaded file', timestamp: '2023-07-01 12:35:00' }
+  {
+    name: 'user',
+    required: true,
+    label: 'User',
+    align: 'left',
+    field: row => row.user.username,
+    format: val => `${val}`,
+    sortable: true
+  },
+  { name: 'actionDescription', align: 'left', label: 'Action', field: 'actionDescription', sortable: true },
+  { name: 'timestamp', label: 'Timestamp', field: 'timestamp', sortable: true }
 ]
 
 export default {
-  components: {
-    FromDateTime,
-    ToDateTime
-  },
   setup () {
     const tableRef = ref(null)
-    const navigationActive = ref(false)
-    const pagination =  ref({
-      sortBy: 'user',
-      descending: false,
+    const rows = ref([])
+    const filter = ref('')
+    const loading = ref(false)
+    const pagination = ref({
+      sortBy: 'timestamp',
+      descending: true,
       page: 1,
       rowsPerPage: 20,
+      rowsNumber: 0
     })
-    const filter = ref('')
+    const fromDate = ref(null)
+    const toDate = ref(null)
+    const userSearch = ref('')
 
-    const tableClass = computed(() => navigationActive.value ? 'shadow-8 no-outline' : null)
+    const fetchLogs = async () => {
+      loading.value = true
+      try {
+        const { page, rowsPerPage, sortBy, descending } = pagination.value
+        const data = await getUserLogs(page, rowsPerPage, {
+          fromDate: fromDate.value,
+          toDate: toDate.value,
+          userSearch: userSearch.value,
+          filter: filter.value,
+          sortBy,
+          descending
+        })
+        rows.value = data.logs
+        pagination.value.rowsNumber = data.totalLogs
+      } catch (error) {
+        console.error('Error fetching logs:', error)
+        // Handle error (e.g., show error message to user)
+      } finally {
+        loading.value = false
+      }
+    }
+
+    const onRequest = (props) => {
+      const { page, rowsPerPage, sortBy, descending } = props.pagination
+      pagination.value = { ...pagination.value, page, rowsPerPage, sortBy, descending }
+      fetchLogs()
+    }
+
+    const onFilterChange = () => {
+      pagination.value.page = 1
+      fetchLogs()
+    }
+
+    watch([filter, fromDate, toDate, userSearch], onFilterChange)
+
+    onMounted(() => {
+      fetchLogs()
+    })
 
     return {
       tableRef,
-      navigationActive,
-      pagination,
       filter,
+      loading,
+      pagination,
       columns,
       rows,
-      tableClass,
+      fromDate,
+      toDate,
+      userSearch,
+      onRequest,
+      onFilterChange
     }
   }
 }
