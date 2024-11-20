@@ -19,6 +19,8 @@ const createNewFileVersion = require('../../controllers/dir/create_new_version.j
 const getAllVersions = require('../../controllers/dir/get_all_versions.js');
 const getDirectoriesByGroup = require('../../controllers/dir/get_dir_by_group.js');
 const getUnassociatedRootDirectories = require('../../controllers/dir/get_unassociated_root_dir.js');
+const deleteGroup = require('../../controllers/roles/delete_group.js');
+const { requireAdmin } = require('../../middleware/permission_check.js');
 
 const storage = multer.memoryStorage(); // Store files in memory before processing
 const upload = multer({ storage });
@@ -55,5 +57,6 @@ dirRouter.get('/file-versions/:fileId', getAllVersions)
 
 dirRouter.get("/get-directories-by-group/:groupId", getDirectoriesByGroup)
 dirRouter.get('/unassociated-root-directories/:groupId',getUnassociatedRootDirectories)
+dirRouter.post('/delete-group', requireAdmin, deleteGroup)
 
 module.exports = dirRouter;

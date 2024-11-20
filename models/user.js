@@ -51,7 +51,7 @@ userSchema.statics.signup = async function(email, username, department, ticketId
     throw Error('Email not valid');
   }
 
-  const existingUser = await this.findOne({ $or: [{ email }, { ticketId }] });
+  const existingUser = await this.findOne({ $or: [{ email }] });
   if (existingUser) {
     if (existingUser.status === 'Pending Active') {
       // Update the existing pending user
@@ -97,12 +97,13 @@ userSchema.statics.login = async function(email, password) {
 
   // Extract the username from the email by removing '@vm.co.mz'
   // Prod ----------------------------------------------------------------
-  const emailPrefix = email.replace('@testad.voda', '');
+  // const emailPrefix = email.replace('@testad.voda', '');
   // Test -------------------------------------
-  //  const emailPrefix = email.replace('@vm.co.mz', '');
+   const emailPrefix = email.replace('@vm.co.mz', '');
 
   // LDAP server configuration
-  const url = 'ldap://10.123.187.100:389'; // Use 'ldaps://' and port 636 if using LDAPS
+  // dev --- 10.123.187.100
+  const url = 'ldap://localhost:10389'; // Use 'ldaps://' and port 636 if using LDAPS
   const client = ldap.createClient({
     url: url,
     timeout: 5000,
@@ -112,9 +113,9 @@ userSchema.statics.login = async function(email, password) {
   // User's Distinguished Name (DN) in LDAP
 
   // Prod ----------------------------------------------------------------
-  //  const userDN = `CN=${emailPrefix},OU=Standard,OU=Vodafone,OU=Users,OU=Vodacom Mozambique,DC=vm,DC=co,DC=mz`;
+   const userDN = `CN=${emailPrefix},OU=Standard,OU=Vodafone,OU=Users,OU=Vodacom Mozambique,DC=vm,DC=co,DC=mz`;
   // Test ------------------------------------
-  const userDN = `CN=${emailPrefix},OU=Users,OU=Vodacom Mozambique,DC=testad,DC=voda`;
+  // const userDN = `CN=${emailPrefix},OU=Users,OU=Vodacom Mozambique,DC=testad,DC=voda`;
 
   // Attempt to bind (authenticate) with the provided credentials
   return new Promise((resolve, reject) => {

@@ -51,7 +51,9 @@ const getFileById = async (req, res) => {
 
     // Check user permissions
     const user = await User.findById(userId);
-    const isAdmin = user.roles.includes('Admin') || user.roles.includes('Editor');
+    const isAdmin = user.roles.includes('Admin') || user.roles.includes('Editor') || user.roles.includes('View');
+
+    console.log(isAdmin )
     if (!isAdmin && file.parent) {
       const hasReadPermission = await checkPermission(file.parent, userId, 'read');
       const hasWritePermission = await checkPermission(file.parent, userId, 'write');
@@ -59,7 +61,11 @@ const getFileById = async (req, res) => {
       if (!hasReadPermission && !hasWritePermission && !hasInviteMemberPermission) {
         return res.status(403).json({ error: 'You do not have permission to access this file' });
       }
+    } else if (!file.parent && !isAdmin) {
+      return res.status(403).json({ error: 'You do not have permission to access this file' });
     }
+
+    
 
     // Create a new GridFSBucket instance
     const bucket = new GridFSBucket(mongoose.connection.db, {

@@ -5,6 +5,7 @@ const User = require('../models/user'); // Adjust the path to your User model
 const authMiddleware = async (req, res, next) => {
   // Get the token from the request body or URL parameters
   const token = req.body.authToken || req.query.authToken;
+  console.log(req.body)
 
   if (!token) {
     return res.status(401).json({ error: 'Access denied. No token provided.' });

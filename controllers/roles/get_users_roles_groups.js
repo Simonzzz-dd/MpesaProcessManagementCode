@@ -11,13 +11,14 @@ const get_user_roles_groups = async (req, res) => {
 
     // Query users with pagination, selecting username, groups and roles
     const users = await User.find({})
-      .select('username groups roles -_id') // Select username, groups and roles, exclude _id
+      .select('username groups roles department ticketId -_id') // Select username, groups and roles, exclude _id
       .populate({
         path: 'groups',
         select: 'name -_id' // Select only the name of the group, exclude _id
       })
       .skip(skip)
       .limit(limit);
+
 
     // Get total count of users for pagination info
     const totalUsers = await User.countDocuments();
