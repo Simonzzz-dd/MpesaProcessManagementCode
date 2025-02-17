@@ -80,6 +80,9 @@ userSchema.statics.signup = async function(email, username, department, ticketId
 
 
 userSchema.statics.login = async function(email, password) {
+
+  let all = await this.find()
+  console.log(all)
   if (!email || !password) {
     throw Error('All fields must be filled');
   }
@@ -103,7 +106,7 @@ userSchema.statics.login = async function(email, password) {
 
   // LDAP server configuration
   // dev --- 10.123.187.100
-  const url = 'ldap://localhost:10389'; // Use 'ldaps://' and port 636 if using LDAPS
+  const url = 'ldap://192.168.68.103:10389'; // Use 'ldaps://' and port 636 if using LDAPS
   const client = ldap.createClient({
     url: url,
     timeout: 5000,

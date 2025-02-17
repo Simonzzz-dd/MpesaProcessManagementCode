@@ -19,10 +19,6 @@ const login = async (req, res) => {
     // Log user action
     logUserAction(user._id, "User Auth", `login from ${req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress}`);
 
-    // Fetch user roles
-    const userWithRoles = await User.findById(user._id)
-
-
     res.status(200).json({
       email,
       token,
